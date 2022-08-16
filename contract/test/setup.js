@@ -18,6 +18,15 @@ import {
   provideBundle,
 } from '@agoric/run-protocol/test/supports.js';
 
+/*
+  Code imported from: @agoric/run-protocol/test/amm/vpool-xyk-amm/setup.js
+  When finished, consider importing the file instead of duplicating it this repository
+  Purpose:
+    setup an zoe instace for testing purposes,
+    setup amm bootstap to get access to produce and consume functions,
+    setup an amm instance, exporting the public and contructor facet for testing purposes;
+*/
+
 const ammRoot =
   '/Users/jorgelopes/Documents/Github/agoric-sdk/packages/run-protocol/src/vpool-xyk-amm/multipoolMarketMaker.js'; // package relative
 

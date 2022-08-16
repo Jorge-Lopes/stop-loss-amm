@@ -12,14 +12,18 @@ import {
   startServices,
   swap,
 } from './helper.js';
-import { assertAmountsEqual } from '@agoric/zoe/test/zoeTestHelpers.js';
 
-test.before(async t => {
+/*
+  This test will execute all functions exported by ./ammLiquidity.js
+  Confirming that the amm instance created by ./setup.js is working properly as well as the functions to interact with this environment.
+*/
+
+test.before(async (t) => {
   const bundleCache = await unsafeMakeBundleCache('bundles/');
   t.context = { bundleCache };
 });
 
-test('start amm pool', async t => {
+test('start amm pool', async (t) => {
   const { zoe, amm, centralR, secondaryR } = await startServices(t);
 
   const centralInitialValue = 10_000n;
@@ -49,7 +53,7 @@ test('start amm pool', async t => {
   );
 });
 
-test('amm add liquidity', async t => {
+test('amm add liquidity', async (t) => {
   const { zoe, amm, centralR, secondaryR } = await startServices(t);
 
   const centralInitialValue = 10_000n;
@@ -113,7 +117,7 @@ test('amm add liquidity', async t => {
   );
 });
 
-test('amm add and remove liquidity', async t => {
+test('amm add and remove liquidity', async (t) => {
   const { zoe, amm, centralR, secondaryR } = await startServices(t);
 
   const centralInitialValue = 10_000n;
@@ -203,7 +207,7 @@ test('amm add and remove liquidity', async t => {
   );
 });
 
-test('amm swap secondary for central', async t => {
+test('amm swap secondary for central', async (t) => {
   const { zoe, amm, centralR, secondaryR } = await startServices(t);
 
   const centralInitialValue = 10_000n;
@@ -248,8 +252,10 @@ test('amm swap secondary for central', async t => {
   const secondaryPayout = await E(swapSeat).getPayout('In');
   const centralPayout = await E(swapSeat).getPayout('Out');
 
-  const secundaryAmount = await E(secondaryR.issuer).getAmountOf(secondaryPayout)
-  const centralAmount = await E(centralR.issuer).getAmountOf(centralPayout)
+  const secundaryAmount = await E(secondaryR.issuer).getAmountOf(
+    secondaryPayout,
+  );
+  const centralAmount = await E(centralR.issuer).getAmountOf(centralPayout);
 
   t.log(secundaryAmount.value);
   t.log(centralAmount.value);

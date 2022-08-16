@@ -7,6 +7,11 @@ import { E } from '@endo/far';
 import { makeLiquidityInvitations } from './ammLiquidity.js';
 import { setupAmmServices } from './setup.js';
 
+/*
+  This file act as a bridge beetween the tests and the functions exported by ./ammLiquidity.js,
+  the function makeAssertPayouts allow us to confirm if a payout returns what is expected;
+*/
+
 export async function startServices(t) {
   const electorateTerms = { committeeName: 'EnBancPanel', committeeSize: 3 };
   const timer = buildManualTimer(console.log);
@@ -27,7 +32,7 @@ export async function startServices(t) {
     centralR,
     secondaryR,
   };
-};
+}
 
 export async function startAmmPool(
   zoe,
@@ -61,7 +66,7 @@ export async function startAmmPool(
     secondaryLiquidityIssuer,
     payout,
   };
-};
+}
 
 export async function addLiquidityToPool(
   zoe,
@@ -72,7 +77,6 @@ export async function addLiquidityToPool(
   centralValue,
   secondaryValue,
 ) {
-
   const { addLiquidity } = await makeLiquidityInvitations(
     zoe,
     amm,
@@ -84,8 +88,7 @@ export async function addLiquidityToPool(
   const payout = await addLiquidity(secondaryValue, centralValue);
 
   return payout;
-};
-
+}
 
 export async function removeLiquidityToPool(
   zoe,
@@ -106,7 +109,7 @@ export async function removeLiquidityToPool(
 
   const payoutRemove = await removeLiquidity(liquidityPayment, liquidityValue);
   return payoutRemove;
-};
+}
 
 export async function swap(
   zoe,
@@ -115,7 +118,6 @@ export async function swap(
   centralR,
   secondaryLiquidityIssuer,
   secondaryValueIn,
-
 ) {
   const { swapSecondaryForCentral } = await makeLiquidityInvitations(
     zoe,
@@ -125,9 +127,9 @@ export async function swap(
     secondaryLiquidityIssuer,
   );
 
-  const swapSeat = await swapSecondaryForCentral( secondaryValueIn);
+  const swapSeat = await swapSecondaryForCentral(secondaryValueIn);
   return swapSeat;
-};
+}
 
 export const makeAssertPayouts = (
   t,

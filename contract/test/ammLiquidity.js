@@ -2,7 +2,17 @@
 
 import { E } from '@endo/eventual-send';
 import { AmountMath } from '@agoric/ertp';
-import { assertPayoutAmount } from '@agoric/zoe/test/zoeTestHelpers.js';
+
+/*
+  File adapted from: @agoric/run-protocol/test/amm/vpool-xyk-amm/test-liquidity.js
+  When finished, consider importing the file instead of duplicating it this repository
+  Purpose:
+    Create function to interact with the AMM instace, such as:
+      - add pool
+      - add liquidity
+      - remove liquidity
+      - swap
+*/
 
 /**
  *
@@ -20,10 +30,10 @@ export const makeLiquidityInvitations = async (
   centralR,
   secondaryLiquidityIssuer,
 ) => {
-  const makeCentral = value => AmountMath.make(centralR.brand, value);
-  const makeSecondary = value => AmountMath.make(secondaryR.brand, value);
+  const makeCentral = (value) => AmountMath.make(centralR.brand, value);
+  const makeSecondary = (value) => AmountMath.make(secondaryR.brand, value);
   const secondaryLiquidityBrand = await E(secondaryLiquidityIssuer).getBrand();
-  const secondaryLiquidity = value =>
+  const secondaryLiquidity = (value) =>
     AmountMath.make(secondaryLiquidityBrand, value);
 
   const addLiquidity = async (secondary, central) => {
@@ -82,22 +92,23 @@ export const makeLiquidityInvitations = async (
   };
 
   const swapSecondaryForCentral = async (secondaryValueIn) => {
-    
     const invitationIssuer = await E(zoe).getInvitationIssuer();
     const swapInvitation = E(amm.ammPublicFacet).makeSwapInInvitation();
     const { value } = await E(invitationIssuer).getAmountOf(swapInvitation);
-    
+
     assert(Array.isArray(value)); // non-fungible
     const [invitationValue] = value;
     const swapPublicFacet = await E(zoe).getPublicFacet(
       invitationValue.instance,
     );
 
-    const { amountOut: centralAmountOut } = await E(swapPublicFacet).getInputPrice(
+    const { amountOut: centralAmountOut } = await E(
+      swapPublicFacet,
+    ).getInputPrice(
       makeSecondary(secondaryValueIn),
       AmountMath.makeEmpty(centralR.brand),
     );
-    
+
     const secondaryForCentralProposal = harden({
       want: { Out: centralAmountOut },
       give: { In: makeSecondary(secondaryValueIn) },
@@ -119,5 +130,3 @@ export const makeLiquidityInvitations = async (
 
   return { addLiquidity, removeLiquidity, swapSecondaryForCentral };
 };
-
-
