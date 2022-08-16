@@ -1,24 +1,27 @@
 // @ts-check
 
 import { Far, E } from '@endo/far';
-import { AmountMath } from '@agoric/ertp';
 
 const start = async zcf => {
-    const { amm } = zcf.getTerms();    
+    const terms = zcf.getTerms();    
+    
+    const {
+        amm,
+        secondaryR,
+    } = terms;
 
-    const getQuote = (amountIn, amountOut) => {
-        const quote = E(amm).getOutputPrice(
-            AmountMath.make(amountIn.brand, 10n),
-            AmountMath.makeEmpty(amountOut.brand),
-        );
-        return quote
+    const secondaryBrand = secondaryR.brand;
+
+    const getAlocation = async () => {
+        const poolAllocation = await E(amm.ammPublicFacet).getPoolAllocation(secondaryBrand);
+        return poolAllocation;
     }
 
-    const publicFacet = Far('Stop Loss public facet', {
-        getQuote,
+    const publicFacet = Far('public facet', {
+        getAlocation,
     });
     
-    const creatorFacet = Far('Stop Loss creator facet', {
+    const creatorFacet = Far('creator facet', {
     });
 
     return harden({ publicFacet, creatorFacet });

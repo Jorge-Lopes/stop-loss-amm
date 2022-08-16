@@ -5,7 +5,7 @@ import { assertPayoutAmount } from '@agoric/zoe/test/zoeTestHelpers.js';
 import buildManualTimer from '@agoric/zoe/tools/manualTimer.js';
 import { E } from '@endo/far';
 import { makeLiquidityInvitations } from './ammLiquidity.js';
-import { setupAmmServices } from './setup.js';
+import { setupAmmServices, setupStopLoss } from './setup.js';
 
 /*
   This file act as a bridge beetween the tests and the functions exported by ./ammLiquidity.js,
@@ -171,4 +171,29 @@ export const makeAssertPayouts = (
       'secondary Payout',
     );
   };
+};
+
+
+export async function startStopLoss (
+  zoe,
+  amm,
+  secondaryR,
+) {
+
+  const terms = {
+    amm,
+    secondaryR,
+  };
+
+  const issuerKeywordRecord = {};
+
+  const { publicFacet, creatorFacet } = await setupStopLoss(
+    zoe,
+    issuerKeywordRecord,
+    terms,
+  )
+
+  return { publicFacet, creatorFacet }
+  
+
 };
