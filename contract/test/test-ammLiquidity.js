@@ -1,7 +1,7 @@
 // @ts-check
 
 import { test } from '@agoric/zoe/tools/prepare-test-env-ava.js';
-import { E } from '@endo/eventual-send';
+import { E } from '@endo/far';
 import { AmountMath } from '@agoric/ertp';
 import { unsafeMakeBundleCache } from '@agoric/run-protocol/test/bundleTool.js';
 import {

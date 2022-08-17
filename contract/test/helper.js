@@ -173,13 +173,7 @@ export const makeAssertPayouts = (
   };
 };
 
-
-export async function startStopLoss (
-  zoe,
-  amm,
-  secondaryR,
-) {
-
+export async function startStopLoss(zoe, amm, secondaryR) {
   const terms = {
     amm,
     secondaryR,
@@ -191,9 +185,7 @@ export async function startStopLoss (
     zoe,
     issuerKeywordRecord,
     terms,
-  )
+  );
 
-  return { publicFacet, creatorFacet }
-  
-
-};
+  return { publicFacet, creatorFacet };
+}
