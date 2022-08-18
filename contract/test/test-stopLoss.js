@@ -32,7 +32,13 @@ test('start stop loss contract', async (t) => {
   );
 
   // start stop loss contract
-  const { publicFacet } = await startStopLoss(zoe, amm, secondaryR);
+  const issuerKeywordRecord = {};
+  const terms = {
+    amm,
+    secondaryR,
+  };
+
+  const { publicFacet } = await startStopLoss(zoe, issuerKeywordRecord, terms);
 
   const poolAlocation = await E(publicFacet).getAlocation();
 
@@ -43,7 +49,35 @@ test('start stop loss contract', async (t) => {
   );
 });
 
-test('Test add LP tokens', async (t) => {
+test('Test add LP tokens without amm', async (t) => {
+  const lpKit = makeIssuerKit('LPTokens');
+  const makeLP = (value) => AmountMath.make(lpKit.brand, value);
+  const lpToken = makeLP(10n);
+  const lpPayment = lpKit.mint.mintPayment(lpToken);
+
+  const { zoe, amm, secondaryR } = await startServices(t);
+
+  const terms = {
+    amm,
+    secondaryR,
+  };
+
+  const issuerKeywordRecord = harden({ LPTokens: lpKit.issuer });
+
+  const { creatorFacet } = await startStopLoss(zoe, issuerKeywordRecord, terms);
+
+  const invitation = await E(creatorFacet).makeAddLPTokensInvitation();
+  const proposal = harden({ give: { LPTokens: lpToken } });
+  const paymentKeywordRecord = harden({ LPTokens: lpPayment });
+
+  const seat = await E(zoe).offer(invitation, proposal, paymentKeywordRecord);
+
+  const message = await E(seat).getOfferResult();
+
+  t.deepEqual(message, 'LP Tokens locked in the amount of 10');
+});
+
+test('Test add LP tokens with amm', async (t) => {
   const { zoe, amm, centralR, secondaryR } = await startServices(t);
   const centralInitialValue = 10_000n;
   const secondaryInitialValue = 20_000n;
@@ -71,29 +105,27 @@ test('Test add LP tokens', async (t) => {
     secondaryValue,
   );
 
-  const { Liquidity } = payout
-  const { creatorFacet } = await startStopLoss(zoe, amm, secondaryR);
+  const { Liquidity } = payout;
+  const liquidityAmount = await E(secondaryLiquidityIssuer).getAmountOf(
+    Liquidity,
+  );
 
-  // instead of creating a new LP token, I need to get the token from the payout!!!
-  // const secondaryLiquidityBrand = await E(secondaryLiquidityIssuer).getBrand();
-  // const secondaryLiquidity = (value) => AmountMath.make(secondaryLiquidityBrand, value);
-  // const liquidityValue = secondaryLiquidity(30_000n)
-
-
-  const lpKit = makeIssuerKit('lpToken');
-  const makeLP = (value) => AmountMath.make(lpKit.brand, value);
-  const lpToken = makeLP(10n)
-  const lpPayment = lpKit.mint.mintPayment(lpToken)
+  const issuerKeywordRecord = harden({ LPTokens: secondaryLiquidityIssuer });
+  const terms = {
+    amm,
+    secondaryR,
+  };
+  const { creatorFacet } = await startStopLoss(zoe, issuerKeywordRecord, terms);
 
   const invitation = await E(creatorFacet).makeAddLPTokensInvitation();
-  const proposal = harden({ give: { LPTokens: lpToken } });
-  const paymentKeywordRecord = harden({ LPTokens: lpPayment });
+  const proposal = harden({ give: { LPTokens: liquidityAmount } });
+  const paymentKeywordRecord = harden({ LPTokens: Liquidity });
 
-  const seat = E(zoe).offer(invitation, proposal, paymentKeywordRecord);
+  const seat = await E(zoe).offer(invitation, proposal, paymentKeywordRecord);
 
   const message = await E(seat).getOfferResult();
 
-  t.deepEqual(message, 'LP Tokens locked in the amount of 10');
+  t.deepEqual(message, 'LP Tokens locked in the amount of 30000');
 });
 
 /*

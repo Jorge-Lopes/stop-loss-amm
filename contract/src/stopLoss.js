@@ -9,13 +9,13 @@ import { Far, E } from '@endo/far';
 const start = async (zcf) => {
   /* Code structure:
     
-    terms: stopRatio, secondaryBrand
+    terms: amm, stopRatioUpperLimit, stopRatioLowerLimit,  secondaryBrand
     issuerKeywordRecord: Central, Secondary
 
     makeAddLPTokensInvitation () => {}
     addLPTokens () => {}
 
-    getPriceAuthority () => {}
+    getPriceAuthority (Secondary) => {}
     getQuote () => {}
 
     makeRemoveLiquidityInvitation () => {}
@@ -49,7 +49,6 @@ const start = async (zcf) => {
   const { amm, secondaryR } = zcf.getTerms();
   const { zcfSeat } = zcf.makeEmptySeatKit();
 
-
   const makeAddLPTokensInvitation = () => {
     const addLPTokens = (creatorSeat) => {
       assertProposalShape(creatorSeat, {
@@ -64,7 +63,7 @@ const start = async (zcf) => {
         creatorSeat.decrementBy(harden({ LPTokens: lpTokensAmount })),
       );
 
-      zcf.relocate(zcfSeat, creatorSeat);
+      zcf.reallocate(zcfSeat, creatorSeat);
 
       creatorSeat.exit();
 
@@ -74,7 +73,6 @@ const start = async (zcf) => {
     return zcf.makeInvitation(addLPTokens, 'Add LP Tokens');
   };
 
-  
   // functions for testing purpose, to be removed!
   const secondaryBrand = secondaryR.brand;
   const getAlocation = async () => {
@@ -83,7 +81,6 @@ const start = async (zcf) => {
     );
     return poolAllocation;
   };
-
 
   // Contract facets
   const publicFacet = Far('public facet', {
