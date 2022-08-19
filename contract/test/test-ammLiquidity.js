@@ -1,7 +1,7 @@
 // @ts-check
 
 import { test } from '@agoric/zoe/tools/prepare-test-env-ava.js';
-import { E } from '@endo/eventual-send';
+import { E } from '@endo/far';
 import { AmountMath } from '@agoric/ertp';
 import { unsafeMakeBundleCache } from '@agoric/run-protocol/test/bundleTool.js';
 import {
@@ -82,7 +82,7 @@ test('amm add liquidity', async (t) => {
     `poolAllocation after initialization`,
   );
 
-  // Add liquidity offer (secundary:central) 40_000:30_000.
+  // Add liquidity offer (secondary:central) 40_000:30_000.
   const centralValue = 30_000n;
   const secondaryValue = 70_000n;
 
@@ -146,7 +146,7 @@ test('amm add and remove liquidity', async (t) => {
     `poolAllocation after initialization`,
   );
 
-  // Add liquidity offer (secundary:central) 40_000:30_000.
+  // Add liquidity offer (secondary:central) 40_000:30_000.
   const centralValue = 30_000n;
   const secondaryValue = 70_000n;
 
@@ -252,12 +252,12 @@ test('amm swap secondary for central', async (t) => {
   const secondaryPayout = await E(swapSeat).getPayout('In');
   const centralPayout = await E(swapSeat).getPayout('Out');
 
-  const secundaryAmount = await E(secondaryR.issuer).getAmountOf(
+  const secondaryAmount = await E(secondaryR.issuer).getAmountOf(
     secondaryPayout,
   );
   const centralAmount = await E(centralR.issuer).getAmountOf(centralPayout);
 
-  t.log(secundaryAmount.value);
+  t.log(secondaryAmount.value);
   t.log(centralAmount.value);
 
   /*

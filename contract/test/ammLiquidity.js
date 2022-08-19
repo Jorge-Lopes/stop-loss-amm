@@ -67,7 +67,7 @@ export const makeLiquidityInvitations = async (
     return E(addLiquiditySeat).getPayouts();
   };
 
-  const removeLiquidity = async (liquidityTokens, liquidity) => {
+  const removeLiquidity = async (liquidityPayment, liquidity) => {
     const removeLiquidityInvitation = E(
       amm.ammPublicFacet,
     ).makeRemoveLiquidityInvitation();
@@ -80,12 +80,12 @@ export const makeLiquidityInvitations = async (
         Central: makeCentral(0n),
       },
     });
-    const payments = { Liquidity: liquidityTokens };
+    const payment = { Liquidity: liquidityPayment };
 
     const addLiquiditySeat = await E(zoe).offer(
       removeLiquidityInvitation,
       proposal,
-      payments,
+      payment,
     );
 
     return E(addLiquiditySeat).getPayouts();

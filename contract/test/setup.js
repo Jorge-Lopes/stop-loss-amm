@@ -17,6 +17,7 @@ import {
   installGovernance,
   provideBundle,
 } from '@agoric/run-protocol/test/supports.js';
+import bundleSource from "@endo/bundle-source";
 
 /*
   Code imported from: @agoric/run-protocol/test/amm/vpool-xyk-amm/setup.js
@@ -29,6 +30,9 @@ import {
 
 const ammRoot =
   '/Users/jorgelopes/Documents/Github/agoric-sdk/packages/run-protocol/src/vpool-xyk-amm/multipoolMarketMaker.js'; // package relative
+
+const stopLossRoot =
+  '/Users/jorgelopes/Documents/Github/stop-loss-amm/contract/src/stopLoss.js'
 
 export const setUpZoeForTest = async () => {
   const { makeFar } = makeLoopback('zoeTest');
@@ -149,3 +153,25 @@ export const setupAmmServices = async (
   };
 };
 harden(setupAmmServices);
+
+
+export const setupStopLoss = async (
+  zoe,
+  issuerKeywordRecord,
+  terms,
+
+) => {
+
+  const contractPath = new URL(stopLossRoot, import.meta.url).pathname;
+  const bundle = await bundleSource(contractPath);
+  const installation = await E(zoe).install(bundle);
+
+  const { publicFacet, creatorFacet  } = await E(zoe).startInstance(
+    installation,
+    issuerKeywordRecord,
+    terms
+  );
+
+  return { publicFacet, creatorFacet };
+
+};
