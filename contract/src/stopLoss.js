@@ -89,7 +89,11 @@ const start = async (zcf) => {
   const liquidityIssuer = zcf.getIssuerForBrand(liquidityBrand);
 
 
+  // should remove liquidity have an invitation? considering that it will be not exposed to outside
+  // should this function send the assets directly to the user seat or store in the zcfSeat?
   // should I get the amm pool from the secondary and not from the terms
+  // BUG: problems with the liquidity issuer to generate a payment
+  // How should I use the issuerKeywords?
   const removeLiquidity = () => {
     const liquidityIn = zcfSeat.getAmountAllocated(
       'Liquidity',
