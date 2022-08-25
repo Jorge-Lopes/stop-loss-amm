@@ -1,5 +1,6 @@
 node_modules
-_agstate/*
+_agstate/yarn-links
+_agstate/agoric-servers/node_modules
 contract/bundles/*
 .idea/
 yarn.lock
