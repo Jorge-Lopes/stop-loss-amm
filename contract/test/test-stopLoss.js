@@ -9,10 +9,10 @@ import {
   startStopLoss,
 } from './helper.js';
 import { AmountMath, makeIssuerKit } from '@agoric/ertp';
-import { E } from '@endo/eventual-send';
+import { E } from '@endo/far';
 
 test.before(async (t) => {
-  const bundleCache = await unsafeMakeBundleCache('bundles/');
+  const bundleCache = await unsafeMakeBundleCache('./bundles/');
   t.context = { bundleCache };
 });
 

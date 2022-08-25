@@ -1,2 +1,5 @@
 node_modules
 _agstate/*
+contract/bundles/*
+.idea/
+yarn.lock
