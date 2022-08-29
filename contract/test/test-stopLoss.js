@@ -92,17 +92,21 @@ test('Test add Liquidity with amm', async (t) => {
   };
   const issuerKeywordRecord = {};
 
-  const { creatorFacet } = await startStopLoss(zoe, issuerKeywordRecord, terms);
+  const { creatorFacet, publicFacet } = await startStopLoss(zoe, issuerKeywordRecord, terms);
 
-  const invitation = await E(creatorFacet).makeAddLiquidityInvitation();
+  const invitation = E(creatorFacet).makeAddLiquidityInvitation();
   const proposal = harden({ give: { Liquidity: liquidityAmount } });
   const paymentKeywordRecord = harden({ Liquidity: Liquidity });
 
   const seat = await E(zoe).offer(invitation, proposal, paymentKeywordRecord);
 
-  const message = await E(seat).getOfferResult();
+  const [message, liquidityTokenBalance] = await Promise.all([
+    E(seat).getOfferResult(),
+    E(publicFacet).getLiquidityBalance(),
+  ]);
 
   t.deepEqual(message, 'Liquidity locked in the amount of 30000');
+  t.deepEqual(liquidityTokenBalance, liquidityAmount); // Make sure the balance in the contract is as expected
 });
 
 

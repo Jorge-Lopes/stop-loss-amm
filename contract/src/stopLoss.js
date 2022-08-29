@@ -14,7 +14,7 @@ const start = async (zcf) => {
     S: secondaryIssuer,
     L: liquidityIssuer,
   });
-  const { zcfSeat } = zcf.makeEmptySeatKit();
+  const { zcfSeat: stopLossSeat } = zcf.makeEmptySeatKit();
   const zoeService = zcf.getZoeService();
 
   const makeAddLiquidityInvitation = () => {
@@ -27,11 +27,11 @@ const start = async (zcf) => {
         give: { Liquidity: liquidityAmount },
       } = creatorSeat.getProposal();
 
-      zcfSeat.incrementBy(
+      stopLossSeat.incrementBy(
         creatorSeat.decrementBy(harden({ Liquidity: liquidityAmount })),
       );
 
-      zcf.reallocate(zcfSeat, creatorSeat);
+      zcf.reallocate(stopLossSeat, creatorSeat);
 
       creatorSeat.exit();
 
@@ -44,12 +44,12 @@ const start = async (zcf) => {
   // should I use IssuerKeywordRecords to pass the Issuers instead of terms?
   // Is the saveAllIssuers usefull?
   // should remove liquidity have an invitation? considering that it will be not exposed to outside
-  // should this function send the assets directly to the user seat or store in the zcfSeat?
+  // should this function send the assets directly to the user seat or store in the stopLossSeat?
   // should I get the amm pool from the secondary and not from the terms
 
   const removeLiquidity = () => {
     console.log('LOG: remove Liquidity func');
-    const seatAllocation = zcfSeat.getCurrentAllocation();
+    const seatAllocation = stopLossSeat.getCurrentAllocation();
     const liquidityIn = seatAllocation.Liquidity.value;
     console.log('LOG: ' + liquidityIn);
 
@@ -83,11 +83,11 @@ const start = async (zcf) => {
 
     const { Central: c, Secondary: s } = E(removeLiquiditySeat).getPayouts();
 
-    zcfSeat.incrementBy(
+    stopLossSeat.incrementBy(
       removeLiquiditySeat.decrementBy(harden({ Central: c, Secondary: s })),
     );
 
-    zcf.reallocate(zcfSeat, removeLiquiditySeat);
+    zcf.reallocate(stopLossSeat, removeLiquiditySeat);
 
     removeLiquiditySeat.exit;
 
@@ -95,7 +95,9 @@ const start = async (zcf) => {
   };
 
   // Contract facets
-  const publicFacet = Far('public facet', {});
+  const publicFacet = Far('public facet', {
+    getLiquidityBalance: () => stopLossSeat.getAmountAllocated('Liquidity', zcf.getBrandForIssuer(liquidityIssuer))
+  });
 
   const creatorFacet = Far('creator facet', {
     makeAddLiquidityInvitation,
