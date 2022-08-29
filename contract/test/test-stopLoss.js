@@ -51,9 +51,11 @@ test('Test add Liquidity with amm', async (t) => {
   const centralInitialValue = 10_000n;
   const secondaryInitialValue = 20_000n;
 
-  const { secondaryLiquidityIssuer } = await startAmmPool(
+  const ammPublicFacet = amm.ammPublicFacet;
+
+  const { liquidityIssuer } = await startAmmPool(
     zoe,
-    amm,
+    ammPublicFacet,
     centralR,
     secondaryR,
     centralInitialValue,
@@ -66,25 +68,29 @@ test('Test add Liquidity with amm', async (t) => {
 
   const payout = await addLiquidityToPool(
     zoe,
-    amm,
+    ammPublicFacet,
     centralR,
     secondaryR,
-    secondaryLiquidityIssuer,
+    liquidityIssuer,
     centralValue,
     secondaryValue,
   );
 
   const { Liquidity } = payout;
-  const liquidityAmount = await E(secondaryLiquidityIssuer).getAmountOf(
+  const liquidityAmount = await E(liquidityIssuer).getAmountOf(
     Liquidity,
   );
 
-  const secondaryBrand = secondaryR.brand;
+  const centralIssuer = centralR.issuer;
+  const secondaryIssuer = secondaryR.issuer;
+
   const terms = {
-    amm,
-    secondaryBrand,
+    ammPublicFacet,
+    centralIssuer,
+    secondaryIssuer,
+    liquidityIssuer,
   };
-  const issuerKeywordRecord = harden({ Liquidity: secondaryLiquidityIssuer });
+  const issuerKeywordRecord = {};
 
   const { creatorFacet } = await startStopLoss(zoe, issuerKeywordRecord, terms);
 
@@ -105,9 +111,11 @@ test('Test remove Liquidity with amm', async (t) => {
   const centralInitialValue = 10_000n;
   const secondaryInitialValue = 20_000n;
 
-  const { secondaryLiquidityIssuer } = await startAmmPool(
+  const ammPublicFacet = amm.ammPublicFacet;
+
+  const { liquidityIssuer } = await startAmmPool(
     zoe,
-    amm,
+    ammPublicFacet,
     centralR,
     secondaryR,
     centralInitialValue,
@@ -120,32 +128,29 @@ test('Test remove Liquidity with amm', async (t) => {
 
   const payout = await addLiquidityToPool(
     zoe,
-    amm,
+    ammPublicFacet,
     centralR,
     secondaryR,
-    secondaryLiquidityIssuer,
+    liquidityIssuer,
     centralValue,
     secondaryValue,
   );
 
   const { Liquidity } = payout;
-  const liquidityAmount = await E(secondaryLiquidityIssuer).getAmountOf(
+  const liquidityAmount = await E(liquidityIssuer).getAmountOf(
     Liquidity,
   );
 
-  const centralBrand = centralR.brand;
-  const secondaryBrand = secondaryR.brand;
-  const liquidityBrand = await E(secondaryLiquidityIssuer).getBrand();
-
+  const centralIssuer = centralR.issuer;
+  const secondaryIssuer = secondaryR.issuer;
+  
   const terms = {
-    zoe,
-    amm,
-    centralBrand,
-    secondaryBrand,
-    liquidityBrand,
-    secondaryLiquidityIssuer
+    ammPublicFacet,
+    centralIssuer,
+    secondaryIssuer,
+    liquidityIssuer,
   };
-  const issuerKeywordRecord = harden({ Liquidity: secondaryLiquidityIssuer });
+  const issuerKeywordRecord = {};
 
   const { creatorFacet } = await startStopLoss(zoe, issuerKeywordRecord, terms);
 
@@ -155,17 +160,11 @@ test('Test remove Liquidity with amm', async (t) => {
 
   const seat = await E(zoe).offer(invitation, proposal, paymentKeywordRecord);
 
-  const message = await E(seat).getOfferResult();
+  const addLiquidityMessage = await E(seat).getOfferResult();
 
-  t.deepEqual(message, 'Liquidity locked in the amount of 30000');
+  t.deepEqual(addLiquidityMessage, 'Liquidity locked in the amount of 30000');
 
-  const message2 = await E(creatorFacet).removeLiquidity();
-  t.log(message2);
+  const removeLiquidityMessage = await E(creatorFacet).removeLiquidity();
+  t.log(removeLiquidityMessage);
 });
 
-
-/*
-Next steps:
-    Define what sould be on .before func
-    Interact with stopLoss Contract
-*/
