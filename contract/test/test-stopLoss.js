@@ -8,7 +8,6 @@ import {
   startServices,
   startStopLoss,
 } from './helper.js';
-import { AmountMath, makeIssuerKit } from '@agoric/ertp';
 import { E } from '@endo/far';
 
 test.before(async (t) => {
@@ -16,37 +15,7 @@ test.before(async (t) => {
   t.context = { bundleCache };
 });
 
-
-test('Test add Liquidity without amm', async (t) => {
-  const lpKit = makeIssuerKit('Liquidity');
-  const makeLP = (value) => AmountMath.make(lpKit.brand, value);
-  const lpToken = makeLP(10n);
-  const lpPayment = lpKit.mint.mintPayment(lpToken);
-
-  const { zoe, amm, secondaryR } = await startServices(t);
-
-  const secondaryBrand = secondaryR.brand;
-  const terms = {
-    amm,
-    secondaryBrand,
-  };
-
-  const issuerKeywordRecord = harden({ Liquidity: lpKit.issuer });
-
-  const { creatorFacet } = await startStopLoss(zoe, issuerKeywordRecord, terms);
-
-  const invitation = await E(creatorFacet).makeAddLiquidityInvitation();
-  const proposal = harden({ give: { Liquidity: lpToken } });
-  const paymentKeywordRecord = harden({ Liquidity: lpPayment });
-
-  const seat = await E(zoe).offer(invitation, proposal, paymentKeywordRecord);
-
-  const message = await E(seat).getOfferResult();
-
-  t.deepEqual(message, 'Liquidity locked in the amount of 10');
-});
-
-test('Test add Liquidity with amm', async (t) => {
+test('Test add Liquidity to contract', async (t) => {
   const { zoe, amm, centralR, secondaryR } = await startServices(t);
   const centralInitialValue = 10_000n;
   const secondaryInitialValue = 20_000n;
@@ -77,9 +46,7 @@ test('Test add Liquidity with amm', async (t) => {
   );
 
   const { Liquidity } = payout;
-  const liquidityAmount = await E(liquidityIssuer).getAmountOf(
-    Liquidity,
-  );
+  const liquidityAmount = await E(liquidityIssuer).getAmountOf(Liquidity);
 
   const centralIssuer = centralR.issuer;
   const secondaryIssuer = secondaryR.issuer;
@@ -90,27 +57,35 @@ test('Test add Liquidity with amm', async (t) => {
     secondaryIssuer,
     liquidityIssuer,
   };
-  const issuerKeywordRecord = {};
 
-  const { creatorFacet, publicFacet } = await startStopLoss(zoe, issuerKeywordRecord, terms);
+  const issuerKeywordRecord = harden({
+    Central: centralIssuer,
+    Secondary: secondaryIssuer,
+    Liquidity: liquidityIssuer,
+  });
 
-  const invitation = E(creatorFacet).makeAddLiquidityInvitation();
+  const { creatorFacet, publicFacet } = await startStopLoss(
+    zoe,
+    issuerKeywordRecord,
+    terms,
+  );
+
+  const invitation = E(creatorFacet).makeAddLiquidityToContractInvitation();
   const proposal = harden({ give: { Liquidity: liquidityAmount } });
   const paymentKeywordRecord = harden({ Liquidity: Liquidity });
 
   const seat = await E(zoe).offer(invitation, proposal, paymentKeywordRecord);
 
-  const [message, liquidityTokenBalance] = await Promise.all([
+  const [addLiquidityMessage, liquidityTokenBalance] = await Promise.all([
     E(seat).getOfferResult(),
     E(publicFacet).getLiquidityBalance(),
   ]);
 
-  t.deepEqual(message, 'Liquidity locked in the amount of 30000');
+  t.deepEqual(addLiquidityMessage, 'Liquidity locked in the amount of 30000');
   t.deepEqual(liquidityTokenBalance, liquidityAmount); // Make sure the balance in the contract is as expected
 });
 
-
-test('Test remove Liquidity with amm', async (t) => {
+test('Test remove Assets from AMM', async (t) => {
   const { zoe, amm, centralR, secondaryR } = await startServices(t);
   const centralInitialValue = 10_000n;
   const secondaryInitialValue = 20_000n;
@@ -141,34 +116,59 @@ test('Test remove Liquidity with amm', async (t) => {
   );
 
   const { Liquidity } = payout;
-  const liquidityAmount = await E(liquidityIssuer).getAmountOf(
-    Liquidity,
-  );
+  const liquidityAmount = await E(liquidityIssuer).getAmountOf(Liquidity);
 
   const centralIssuer = centralR.issuer;
   const secondaryIssuer = secondaryR.issuer;
-  
+
   const terms = {
     ammPublicFacet,
     centralIssuer,
     secondaryIssuer,
     liquidityIssuer,
   };
-  const issuerKeywordRecord = {};
 
-  const { creatorFacet } = await startStopLoss(zoe, issuerKeywordRecord, terms);
+  const issuerKeywordRecord = harden({
+    Central: centralIssuer,
+    Secondary: secondaryIssuer,
+    Liquidity: liquidityIssuer,
+  });
 
-  const invitation = await E(creatorFacet).makeAddLiquidityInvitation();
+  const { creatorFacet, publicFacet } = await startStopLoss(
+    zoe,
+    issuerKeywordRecord,
+    terms,
+  );
+
+  const addLiquidityInvitation =
+    E(creatorFacet).makeAddLiquidityToContractInvitation();
   const proposal = harden({ give: { Liquidity: liquidityAmount } });
   const paymentKeywordRecord = harden({ Liquidity: Liquidity });
 
-  const seat = await E(zoe).offer(invitation, proposal, paymentKeywordRecord);
-
-  const addLiquidityMessage = await E(seat).getOfferResult();
+  const addLiquiditSeat = await E(zoe).offer(
+    addLiquidityInvitation,
+    proposal,
+    paymentKeywordRecord,
+  );
+  const [addLiquidityMessage, addLiquidityTokenBalance] = await Promise.all([
+    E(addLiquiditSeat).getOfferResult(),
+    E(publicFacet).getLiquidityBalance(),
+  ]);
 
   t.deepEqual(addLiquidityMessage, 'Liquidity locked in the amount of 30000');
+  t.deepEqual(addLiquidityTokenBalance, liquidityAmount); // Make sure the balance in the contract is as expected
 
-  const removeLiquidityMessage = await E(creatorFacet).removeLiquidity();
-  t.log(removeLiquidityMessage);
+  // remove Assets from AMM
+  const removeLiquiditySeat = await E(creatorFacet).removeAssetsFromAmm();
+  const [removeLiquidityMessage, removeLiquidityTokenBalance] = await Promise.all([
+    E(removeLiquiditySeat).getOfferResult(),
+    E(publicFacet).getLiquidityBalance(),
+  ]);
+
+  t.deepEqual(removeLiquidityMessage, 'Liquidity successfully removed.');
+  t.deepEqual(removeLiquidityTokenBalance.value, 0n)
+
+  const print = await E(removeLiquiditySeat).getCurrentAllocation();
+  t.log(print);
+
 });
-
