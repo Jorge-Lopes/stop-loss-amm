@@ -17,28 +17,28 @@ import { AmountMath } from '@agoric/ertp';
 /**
  *
  * @param {ERef<ZoeService>} zoe
- * @param {{ammCreatorFacet: XYKAMMCreatorFacet; ammPublicFacet: GovernedPublicFacet<XYKAMMPublicFacet>; instance: Promise<any>;}} amm
+ * @param {GovernedPublicFacet<XYKAMMPublicFacet>} ammPublicFacet
  * @param {{ mint: Mint; issuer: Issuer; brand: Brand; displayInfo: DisplayInfo }} secondaryR
  * @param {{ mint: Mint; issuer: Issuer; brand: Brand; displayInfo: DisplayInfo }} centralR
- * @param {*} secondaryLiquidityIssuer
+ * @param {*} liquidityIssuer
  * @returns
  */
 export const makeLiquidityInvitations = async (
   zoe,
-  amm,
+  ammPublicFacet,
   secondaryR,
   centralR,
-  secondaryLiquidityIssuer,
+  liquidityIssuer,
 ) => {
   const makeCentral = (value) => AmountMath.make(centralR.brand, value);
   const makeSecondary = (value) => AmountMath.make(secondaryR.brand, value);
-  const secondaryLiquidityBrand = await E(secondaryLiquidityIssuer).getBrand();
-  const secondaryLiquidity = (value) =>
-    AmountMath.make(secondaryLiquidityBrand, value);
+  const liquidityBrand = await E(liquidityIssuer).getBrand();
+  const liquidityAmounth = (value) =>
+    AmountMath.make(liquidityBrand, value);
 
   const addLiquidity = async (secondary, central) => {
     const addLiquidityInvitation = E(
-      amm.ammPublicFacet,
+      ammPublicFacet,
     ).makeAddLiquidityInvitation();
 
     const secondaryPayment = secondaryR.mint.mintPayment(
@@ -47,7 +47,7 @@ export const makeLiquidityInvitations = async (
     const centralPayment = centralR.mint.mintPayment(makeCentral(central));
 
     const proposal = harden({
-      want: { Liquidity: secondaryLiquidity(1000n) },
+      want: { Liquidity: liquidityAmounth(1000n) },
       give: {
         Secondary: makeSecondary(secondary),
         Central: makeCentral(central),
@@ -69,10 +69,10 @@ export const makeLiquidityInvitations = async (
 
   const removeLiquidity = async (liquidityPayment, liquidity) => {
     const removeLiquidityInvitation = E(
-      amm.ammPublicFacet,
+      ammPublicFacet,
     ).makeRemoveLiquidityInvitation();
 
-    const emptyLiquidity = secondaryLiquidity(liquidity);
+    const emptyLiquidity = liquidityAmounth(liquidity);
     const proposal = harden({
       give: { Liquidity: emptyLiquidity },
       want: {
@@ -93,7 +93,7 @@ export const makeLiquidityInvitations = async (
 
   const swapSecondaryForCentral = async (secondaryValueIn) => {
     const invitationIssuer = await E(zoe).getInvitationIssuer();
-    const swapInvitation = E(amm.ammPublicFacet).makeSwapInInvitation();
+    const swapInvitation = E(ammPublicFacet).makeSwapInInvitation();
     const { value } = await E(invitationIssuer).getAmountOf(swapInvitation);
 
     assert(Array.isArray(value)); // non-fungible
