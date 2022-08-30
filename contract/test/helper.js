@@ -36,53 +36,53 @@ export async function startServices(t) {
 
 export async function startAmmPool(
   zoe,
-  amm,
+  ammPublicFacet,
   centralR,
   secondaryR,
   centralInitialValue,
   secondaryInitialValue,
 ) {
   // Here we are creating a pool with (central - secondary)
-  const secondaryLiquidityIssuer = await E(amm.ammPublicFacet).addPool(
+  const liquidityIssuer = await E(ammPublicFacet).addPool(
     secondaryR.issuer,
     'Secondary',
   );
 
   const { addLiquidity } = await makeLiquidityInvitations(
     zoe,
-    amm,
+    ammPublicFacet,
     secondaryR,
     centralR,
-    secondaryLiquidityIssuer,
+    liquidityIssuer,
   );
 
   const payout = await addLiquidity(secondaryInitialValue, centralInitialValue);
 
   return {
     zoe,
-    amm,
+    ammPublicFacet,
     secondaryR,
     centralR,
-    secondaryLiquidityIssuer,
+    liquidityIssuer,
     payout,
   };
 }
 
 export async function addLiquidityToPool(
   zoe,
-  amm,
+  ammPublicFacet,
   centralR,
   secondaryR,
-  secondaryLiquidityIssuer,
+  liquidityIssuer,
   centralValue,
   secondaryValue,
 ) {
   const { addLiquidity } = await makeLiquidityInvitations(
     zoe,
-    amm,
+    ammPublicFacet,
     secondaryR,
     centralR,
-    secondaryLiquidityIssuer,
+    liquidityIssuer,
   );
 
   const payout = await addLiquidity(secondaryValue, centralValue);
@@ -92,19 +92,19 @@ export async function addLiquidityToPool(
 
 export async function removeLiquidityToPool(
   zoe,
-  amm,
+  ammPublicFacet,
   centralR,
   secondaryR,
-  secondaryLiquidityIssuer,
+  liquidityIssuer,
   liquidityPayment,
   liquidityValue,
 ) {
   const { removeLiquidity } = await makeLiquidityInvitations(
     zoe,
-    amm,
+    ammPublicFacet,
     secondaryR,
     centralR,
-    secondaryLiquidityIssuer,
+    liquidityIssuer,
   );
 
   const payoutRemove = await removeLiquidity(liquidityPayment, liquidityValue);
@@ -113,18 +113,18 @@ export async function removeLiquidityToPool(
 
 export async function swap(
   zoe,
-  amm,
+  ammPublicFacet,
   secondaryR,
   centralR,
-  secondaryLiquidityIssuer,
+  liquidityIssuer,
   secondaryValueIn,
 ) {
   const { swapSecondaryForCentral } = await makeLiquidityInvitations(
     zoe,
-    amm,
+    ammPublicFacet,
     secondaryR,
     centralR,
-    secondaryLiquidityIssuer,
+    liquidityIssuer,
   );
 
   const swapSeat = await swapSecondaryForCentral(secondaryValueIn);
@@ -133,7 +133,7 @@ export async function swap(
 
 export const makeAssertPayouts = (
   t,
-  secondaryLiquidityIssuer,
+  liquidityIssuer,
   liquidityBrand,
   centralR,
   secondaryR,
@@ -149,7 +149,7 @@ export const makeAssertPayouts = (
     const lAmount = AmountMath.make(liquidityBrand, lExpected);
     await assertPayoutAmount(
       t,
-      secondaryLiquidityIssuer,
+      liquidityIssuer,
       lPayment,
       lAmount,
       'Liquidity payout',

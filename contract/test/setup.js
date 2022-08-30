@@ -1,5 +1,5 @@
 // @ts-check
-import { E } from '@endo/eventual-send';
+import { E } from '@endo/far';
 import { makeLoopback } from '@endo/captp';
 import { makeFakeVatAdmin } from '@agoric/zoe/tools/fakeVatAdmin.js';
 import { makeZoeKit } from '@agoric/zoe';
@@ -18,6 +18,7 @@ import {
   provideBundle,
 } from '@agoric/run-protocol/test/supports.js';
 import bundleSource from "@endo/bundle-source";
+import { resolve as importMetaResolve } from 'import-meta-resolve';
 
 /*
   Code imported from: @agoric/run-protocol/test/amm/vpool-xyk-amm/setup.js
@@ -29,10 +30,10 @@ import bundleSource from "@endo/bundle-source";
 */
 
 const ammRoot =
-  '/Users/jorgelopes/Documents/Github/agoric-sdk/packages/run-protocol/src/vpool-xyk-amm/multipoolMarketMaker.js'; // package relative
+  '@agoric/run-protocol/src/vpool-xyk-amm/multipoolMarketMaker.js'; // package relative
 
 const stopLossRoot =
-  '/Users/jorgelopes/Documents/Github/stop-loss-amm/contract/src/stopLoss.js'
+  '../src/stopLoss.js'
 
 export const setUpZoeForTest = async () => {
   const { makeFar } = makeLoopback('zoeTest');
@@ -96,7 +97,8 @@ export const setupAmmServices = async (
   }
   const space = await setupAMMBootstrap(timer, zoe);
   const { consume, brand, issuer, installation, instance } = space;
-  const ammBundle = await provideBundle(t, ammRoot, 'amm');
+  const url = await importMetaResolve(ammRoot, import.meta.url);
+  const ammBundle = await provideBundle(t, new URL(url).pathname, 'amm');
   installation.produce.amm.resolve(E(zoe).install(ammBundle));
 
   brand.produce.RUN.resolve(centralR.brand);

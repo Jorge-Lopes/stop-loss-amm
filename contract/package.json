@@ -1,5 +1,5 @@
 {
-  "name": "ibc-liquidity-mining-contract",
+  "name": "contract",
   "version": "0.1.0",
   "private": true,
   "description": "Contract for the Agoric Dapp",

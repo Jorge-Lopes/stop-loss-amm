@@ -5,93 +5,134 @@ import {
   assertProposalShape,
 } from '@agoric/zoe/src/contractSupport';
 import { Far, E } from '@endo/far';
+import { AmountMath } from '@agoric/ertp';
+import { offerTo } from '@agoric/zoe/src/contractSupport/index.js';
 
 const start = async (zcf) => {
-  /* Code structure:
-    
-    terms: amm, stopRatioUpperLimit, stopRatioLowerLimit,  secondaryBrand
-    issuerKeywordRecord: Central, Secondary
+  const { ammPublicFacet, centralIssuer, secondaryIssuer, liquidityIssuer } =
+    zcf.getTerms();
+  assertIssuerKeywords(zcf, ['Central', 'Secondary', 'Liquidity']);
+  const { zcfSeat: stopLossSeat } = zcf.makeEmptySeatKit();
 
-    makeAddLPTokensInvitation () => {}
-    addLPTokens () => {}
+  const centralBrand = zcf.getBrandForIssuer(centralIssuer);
+  const secondaryBrand = zcf.getBrandForIssuer(secondaryIssuer);
+  const centralAmount = (value) => AmountMath.make(centralBrand, value);
+  const secondaryAmount = (value) => AmountMath.make(secondaryBrand, value);
 
-    getPriceAuthority (Secondary) => {}
-    getQuote () => {}
-
-    makeRemoveLiquidityInvitation () => {}
-    removeLiquidity () => {}
-
-    isStopRatio () => {
-        removeLiquidity ()
-    }
-
-    updateStopRatio () => {
-        removeLiquidity ()
-        create new contract*
-    }
-
-    withdrawLiquidity () => {}
-
-    publicFacet ({
-        getQuote
-    })
-
-    creatorFacet ({
-        makeAddLPTokensInvitation,
-        updateStopRatio
-        withdrawLiquidity
-    })
-
-    */
-
-  // const { stopRatio, secondaryR } = zcf.getTerms();
-  // assertIssuerKeywords(zcf, ['Central', 'Secondary']);
-  const { amm, secondaryR } = zcf.getTerms();
-  const { zcfSeat } = zcf.makeEmptySeatKit();
-
-  const makeAddLPTokensInvitation = () => {
-    const addLPTokens = (creatorSeat) => {
+  const makeLockLPTokensInvitation = () => {
+    const lockLPTokens = (creatorSeat) => {
       assertProposalShape(creatorSeat, {
-        give: { LPTokens: null },
+        give: { Liquidity: null },
       });
 
       const {
-        give: { LPTokens: lpTokensAmount },
+        give: { Liquidity: liquidityAmount },
       } = creatorSeat.getProposal();
 
-      zcfSeat.incrementBy(
-        creatorSeat.decrementBy(harden({ LPTokens: lpTokensAmount })),
+      stopLossSeat.incrementBy(
+        creatorSeat.decrementBy(harden({ Liquidity: liquidityAmount })),
       );
 
-      zcf.reallocate(zcfSeat, creatorSeat);
+      zcf.reallocate(stopLossSeat, creatorSeat);
 
       creatorSeat.exit();
 
-      return `LP Tokens locked in the amount of ${lpTokensAmount.value}`;
+      return `Liquidity locked in the value of ${liquidityAmount.value}`;
     };
 
-    return zcf.makeInvitation(addLPTokens, 'Add LP Tokens');
+    return zcf.makeInvitation(
+      lockLPTokens,
+      'Lock LP Tokens in stopLoss contact',
+    );
   };
 
-  // functions for testing purpose, to be removed!
-  const secondaryBrand = secondaryR.brand;
-  const getAlocation = async () => {
-    const poolAllocation = await E(amm.ammPublicFacet).getPoolAllocation(
-      secondaryBrand,
+  const removeLiquidityFromAmm = async () => {
+    const removeLiquidityInvitation =
+      E(ammPublicFacet).makeRemoveLiquidityInvitation();
+
+    const liquidityIn = stopLossSeat.getAmountAllocated(
+      'Liquidity',
+      zcf.getBrandForIssuer(liquidityIssuer),
     );
-    return poolAllocation;
+
+    const proposal = harden({
+      want: {
+        Central: centralAmount(0n),
+        Secondary: secondaryAmount(0n),
+      },
+      give: {
+        Liquidity: liquidityIn,
+      },
+    });
+
+    const { deposited, userSeatPromise: liquiditySeat } = await offerTo(
+      zcf,
+      removeLiquidityInvitation,
+      undefined,
+      proposal,
+      stopLossSeat,
+      stopLossSeat,
+      undefined,
+    );
+
+    return liquiditySeat;
+  };
+
+  const getBalanceByBrand = (keyword, issuer) => {
+    return stopLossSeat.getAmountAllocated(
+      keyword,
+      zcf.getBrandForIssuer(issuer),
+    );
   };
 
   // Contract facets
   const publicFacet = Far('public facet', {
-    getAlocation,
+    getBalanceByBrand,
   });
 
   const creatorFacet = Far('creator facet', {
-    makeAddLPTokensInvitation,
+    makeLockLPTokensInvitation,
+    removeLiquidityFromAmm,
   });
 
   return harden({ publicFacet, creatorFacet });
 };
 harden(start);
 export { start };
+
+/* Code structure:
+  
+  terms: ammPublicFacet, stopRatioUpperLimit, stopRatioLowerLimit,  secondaryBrand;
+  issuerKeywordRecord: Central, Secondary, Liquidity;
+
+  makeAddLPTokensInvitation () => {}
+  addLPTokens () => {}
+
+  getPriceAuthority (Secondary) => {}
+  getQuote () => {}
+
+  makeRemoveLiquidityInvitation () => {}
+  removeLiquidity () => {}
+
+  isStopRatio () => {
+      removeLiquidity ()
+  }
+
+  updateStopRatio () => {
+      removeLiquidity ()
+      create new contract*
+  }
+
+  withdrawLiquidity () => {}
+
+  publicFacet ({
+      getQuote
+  })
+
+  creatorFacet ({
+      makeAddLPTokensInvitation,
+      updateStopRatio
+      withdrawLiquidity
+  })
+
+*/
