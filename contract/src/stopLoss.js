@@ -42,11 +42,11 @@ const start = async (zcf) => {
 
     return zcf.makeInvitation(
       lockLPTokens,
-      'Lock LP Tokens in stopLoss contract',
+      'Lock LP Tokens in stopLoss contact',
     );
   };
 
-  const removeAssetsFromAmm = async () => {
+  const removeLiquidityFromAmm = async () => {
     const removeLiquidityInvitation =
       E(ammPublicFacet).makeRemoveLiquidityInvitation();
 
@@ -92,7 +92,7 @@ const start = async (zcf) => {
 
   const creatorFacet = Far('creator facet', {
     makeLockLPTokensInvitation,
-    removeAssetsFromAmm,
+    removeLiquidityFromAmm,
   });
 
   return harden({ publicFacet, creatorFacet });
