@@ -16,8 +16,8 @@ export async function startServices(t) {
   const electorateTerms = { committeeName: 'EnBancPanel', committeeSize: 3 };
   const timer = buildManualTimer(console.log);
 
-  const centralR = makeIssuerKit('central');
-  const secondaryR = makeIssuerKit('secondary');
+  const centralR = makeIssuerKit('Central');
+  const secondaryR = makeIssuerKit('Secondary');
 
   const { zoe, amm } = await setupAmmServices(
     t,
@@ -45,7 +45,7 @@ export async function startAmmPool(
   // Here we are creating a pool with (central - secondary)
   const liquidityIssuer = await E(ammPublicFacet).addPool(
     secondaryR.issuer,
-    'Secondary',
+    'Amm',
   );
 
   const { addLiquidity } = await makeLiquidityInvitations(
