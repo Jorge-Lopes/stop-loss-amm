@@ -3,6 +3,7 @@
 import {
   assertIssuerKeywords,
   assertProposalShape,
+  getAmountOut,
 } from '@agoric/zoe/src/contractSupport';
 import { Far, E } from '@endo/far';
 import { AmountMath } from '@agoric/ertp';
@@ -42,10 +43,15 @@ const start = async (zcf) => {
 
     return zcf.makeInvitation(
       lockLPTokens,
-      'Lock LP Tokens in stopLoss contact',
+      'Lock LP Tokens in stopLoss contract',
     );
   };
 
+  /* 
+  Questions:
+    how should I use "deposited"?
+    Should the liquidity be reallocated from "liquiditySeat" to the "stopLossSeat"?
+  */
   const removeLiquidityFromAmm = async () => {
     const removeLiquidityInvitation =
       E(ammPublicFacet).makeRemoveLiquidityInvitation();
@@ -78,6 +84,26 @@ const start = async (zcf) => {
     return liquiditySeat;
   };
 
+  const getQuotefromCentral = async (value) => {
+    const { fromCentral: priceAuthority } = await E(ammPublicFacet).getPriceAuthorities(secondaryBrand);
+    const quoteGiven = await E(priceAuthority).quoteGiven(
+      centralAmount(value),
+      secondaryBrand,
+    );
+    const amountOut = getAmountOut(quoteGiven);
+    return amountOut;
+  };
+
+  // Work in progress
+  const getQuoteWhenFromCentral = async (valueIn, valueOut) => {
+    const { fromCentral: priceAuthority } = await E(ammPublicFacet).getPriceAuthorities(secondaryBrand);
+    const quoteWhenGTE = await E(priceAuthority).quoteWhenGTE(
+      centralAmount(valueIn), 
+      secondaryAmount(valueOut)
+    );
+    return quoteWhenGTE;
+  };
+
   const getBalanceByBrand = (keyword, issuer) => {
     return stopLossSeat.getAmountAllocated(
       keyword,
@@ -88,6 +114,8 @@ const start = async (zcf) => {
   // Contract facets
   const publicFacet = Far('public facet', {
     getBalanceByBrand,
+    getQuotefromCentral,
+    getQuoteWhenFromCentral,
   });
 
   const creatorFacet = Far('creator facet', {
@@ -105,14 +133,14 @@ export { start };
   terms: ammPublicFacet, stopRatioUpperLimit, stopRatioLowerLimit,  secondaryBrand;
   issuerKeywordRecord: Central, Secondary, Liquidity;
 
-  makeAddLPTokensInvitation () => {}
-  addLPTokens () => {}
+  makeLockLPTokensInvitation () => {
+    lockLPTokens () => {}
+  }
+
+  removeLiquidity () => {}
 
   getPriceAuthority (Secondary) => {}
   getQuote () => {}
-
-  makeRemoveLiquidityInvitation () => {}
-  removeLiquidity () => {}
 
   isStopRatio () => {
       removeLiquidity ()

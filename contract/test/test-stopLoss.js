@@ -174,3 +174,170 @@ test('Test remove Assets from AMM', async (t) => {
   t.deepEqual(secondaryTokenBalance.value, 60_000n);
 
 });
+
+
+test('Test get Quote Given from AMM', async (t) => {
+  const { zoe, amm, centralR, secondaryR } = await startServices(t);
+  const centralInitialValue = 10_000n;
+  const secondaryInitialValue = 20_000n;
+
+  const ammPublicFacet = amm.ammPublicFacet;
+
+  const { liquidityIssuer } = await startAmmPool(
+    zoe,
+    ammPublicFacet,
+    centralR,
+    secondaryR,
+    centralInitialValue,
+    secondaryInitialValue,
+  );
+
+  // Add liquidity offer (secondary:central) 40_000:30_000.
+  const centralValue = 30_000n;
+  const secondaryValue = 70_000n;
+
+  const payout = await addLiquidityToPool(
+    zoe,
+    ammPublicFacet,
+    centralR,
+    secondaryR,
+    liquidityIssuer,
+    centralValue,
+    secondaryValue,
+  );
+
+  const { Liquidity } = payout;
+  const liquidityAmount = await E(liquidityIssuer).getAmountOf(Liquidity);
+
+  const centralIssuer = centralR.issuer;
+  const secondaryIssuer = secondaryR.issuer;
+
+  const terms = {
+    ammPublicFacet,
+    centralIssuer,
+    secondaryIssuer,
+    liquidityIssuer,
+  };
+
+  const issuerKeywordRecord = harden({
+    Central: centralIssuer,
+    Secondary: secondaryIssuer,
+    Liquidity: liquidityIssuer,
+  });
+
+  const { creatorFacet, publicFacet } = await startStopLoss(
+    zoe,
+    issuerKeywordRecord,
+    terms,
+  );
+
+  const addLiquidityInvitation =
+    E(creatorFacet).makeLockLPTokensInvitation();
+  const proposal = harden({ give: { Liquidity: liquidityAmount } });
+  const paymentKeywordRecord = harden({ Liquidity: Liquidity });
+
+  const addLiquiditSeat = await E(zoe).offer(
+    addLiquidityInvitation,
+    proposal,
+    paymentKeywordRecord,
+  );
+  const [addLiquidityMessage, addLiquidityTokenBalance] = await Promise.all([
+    E(addLiquiditSeat).getOfferResult(),
+    E(publicFacet).getBalanceByBrand('Liquidity', liquidityIssuer),
+  ]);
+
+  t.deepEqual(addLiquidityMessage, 'Liquidity locked in the value of 30000');
+  t.deepEqual(addLiquidityTokenBalance, liquidityAmount); // Make sure the balance in the contract is as expected
+
+  const quote = await E(publicFacet).getQuotefromCentral(10_000n);
+  t.log(quote);
+
+});
+
+test('Test get Quote When from AMM', async (t) => {
+  const { zoe, amm, centralR, secondaryR } = await startServices(t);
+  const centralInitialValue = 10_000n;
+  const secondaryInitialValue = 20_000n;
+
+  const ammPublicFacet = amm.ammPublicFacet;
+
+  const { liquidityIssuer } = await startAmmPool(
+    zoe,
+    ammPublicFacet,
+    centralR,
+    secondaryR,
+    centralInitialValue,
+    secondaryInitialValue,
+  );
+
+  // Add liquidity offer (secondary:central) 40_000:30_000.
+  const centralValue = 30_000n;
+  const secondaryValue = 70_000n;
+
+  const payout = await addLiquidityToPool(
+    zoe,
+    ammPublicFacet,
+    centralR,
+    secondaryR,
+    liquidityIssuer,
+    centralValue,
+    secondaryValue,
+  );
+
+  const { Liquidity } = payout;
+  const liquidityAmount = await E(liquidityIssuer).getAmountOf(Liquidity);
+
+  const centralIssuer = centralR.issuer;
+  const secondaryIssuer = secondaryR.issuer;
+
+  const terms = {
+    ammPublicFacet,
+    centralIssuer,
+    secondaryIssuer,
+    liquidityIssuer,
+  };
+
+  const issuerKeywordRecord = harden({
+    Central: centralIssuer,
+    Secondary: secondaryIssuer,
+    Liquidity: liquidityIssuer,
+  });
+
+  const { creatorFacet, publicFacet } = await startStopLoss(
+    zoe,
+    issuerKeywordRecord,
+    terms,
+  );
+
+  const addLiquidityInvitation =
+    E(creatorFacet).makeLockLPTokensInvitation();
+  const proposal = harden({ give: { Liquidity: liquidityAmount } });
+  const paymentKeywordRecord = harden({ Liquidity: Liquidity });
+
+  const addLiquiditSeat = await E(zoe).offer(
+    addLiquidityInvitation,
+    proposal,
+    paymentKeywordRecord,
+  );
+  const [addLiquidityMessage, addLiquidityTokenBalance] = await Promise.all([
+    E(addLiquiditSeat).getOfferResult(),
+    E(publicFacet).getBalanceByBrand('Liquidity', liquidityIssuer),
+  ]);
+
+  t.deepEqual(addLiquidityMessage, 'Liquidity locked in the value of 30000');
+  t.deepEqual(addLiquidityTokenBalance, liquidityAmount); // Make sure the balance in the contract is as expected
+
+  const quoteWhenGTE = await E(publicFacet).getQuoteWhenFromCentral(10_000n, 16_000n);
+  
+  // Work in progress
+  let abovePriceQuote;
+  quoteWhenGTE.then(
+    result => (abovePriceQuote = result),
+    reason =>
+      t.notThrows(() => {
+        throw reason;
+      }),
+  );
+  t.log(abovePriceQuote);
+
+});
