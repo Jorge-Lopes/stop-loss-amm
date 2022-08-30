@@ -70,19 +70,19 @@ test('Test add Liquidity to contract', async (t) => {
     terms,
   );
 
-  const invitation = E(creatorFacet).makeAddLiquidityToContractInvitation();
+  const invitation = E(creatorFacet).makeLockLPTokensInvitation();
   const proposal = harden({ give: { Liquidity: liquidityAmount } });
   const paymentKeywordRecord = harden({ Liquidity: Liquidity });
 
   const seat = await E(zoe).offer(invitation, proposal, paymentKeywordRecord);
 
-  const [addLiquidityMessage, liquidityTokenBalance] = await Promise.all([
+  const [addLiquidityMessage, liquidityBalance] = await Promise.all([
     E(seat).getOfferResult(),
-    E(publicFacet).getLiquidityBalance(),
+    E(publicFacet).getBalanceByBrand('Liquidity', liquidityIssuer),
   ]);
 
-  t.deepEqual(addLiquidityMessage, 'Liquidity locked in the amount of 30000');
-  t.deepEqual(liquidityTokenBalance, liquidityAmount); // Make sure the balance in the contract is as expected
+  t.deepEqual(addLiquidityMessage, 'Liquidity locked in the value of 30000');
+  t.deepEqual(liquidityBalance, liquidityAmount); // Make sure the balance in the contract is as expected
 });
 
 test('Test remove Assets from AMM', async (t) => {
@@ -141,7 +141,7 @@ test('Test remove Assets from AMM', async (t) => {
   );
 
   const addLiquidityInvitation =
-    E(creatorFacet).makeAddLiquidityToContractInvitation();
+    E(creatorFacet).makeLockLPTokensInvitation();
   const proposal = harden({ give: { Liquidity: liquidityAmount } });
   const paymentKeywordRecord = harden({ Liquidity: Liquidity });
 
@@ -152,23 +152,25 @@ test('Test remove Assets from AMM', async (t) => {
   );
   const [addLiquidityMessage, addLiquidityTokenBalance] = await Promise.all([
     E(addLiquiditSeat).getOfferResult(),
-    E(publicFacet).getLiquidityBalance(),
+    E(publicFacet).getBalanceByBrand('Liquidity', liquidityIssuer),
   ]);
 
-  t.deepEqual(addLiquidityMessage, 'Liquidity locked in the amount of 30000');
+  t.deepEqual(addLiquidityMessage, 'Liquidity locked in the value of 30000');
   t.deepEqual(addLiquidityTokenBalance, liquidityAmount); // Make sure the balance in the contract is as expected
 
   // remove Assets from AMM
   const removeLiquiditySeat = await E(creatorFacet).removeAssetsFromAmm();
   const [removeLiquidityMessage, removeLiquidityTokenBalance] = await Promise.all([
     E(removeLiquiditySeat).getOfferResult(),
-    E(publicFacet).getLiquidityBalance(),
+    E(publicFacet).getBalanceByBrand('Liquidity', liquidityIssuer),
   ]);
 
   t.deepEqual(removeLiquidityMessage, 'Liquidity successfully removed.');
-  t.deepEqual(removeLiquidityTokenBalance.value, 0n)
+  t.deepEqual(removeLiquidityTokenBalance.value, 0n);
 
-  const print = await E(removeLiquiditySeat).getCurrentAllocation();
-  t.log(print);
+  const {Central: centralTokenBalance, Secondary: secondaryTokenBalance} = await E(removeLiquiditySeat).getCurrentAllocation();
+
+  t.deepEqual(centralTokenBalance.value, 30_000n);
+  t.deepEqual(secondaryTokenBalance.value, 60_000n);
 
 });

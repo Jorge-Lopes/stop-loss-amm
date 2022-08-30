@@ -19,8 +19,8 @@ const start = async (zcf) => {
   const centralAmount = (value) => AmountMath.make(centralBrand, value);
   const secondaryAmount = (value) => AmountMath.make(secondaryBrand, value);
 
-  const makeAddLiquidityToContractInvitation = () => {
-    const addLiquidityToContract = (creatorSeat) => {
+  const makeLockLPTokensInvitation = () => {
+    const lockLPTokens = (creatorSeat) => {
       assertProposalShape(creatorSeat, {
         give: { Liquidity: null },
       });
@@ -37,12 +37,12 @@ const start = async (zcf) => {
 
       creatorSeat.exit();
 
-      return `Liquidity locked in the amount of ${liquidityAmount.value}`;
+      return `Liquidity locked in the value of ${liquidityAmount.value}`;
     };
 
     return zcf.makeInvitation(
-      addLiquidityToContract,
-      'Add Liquidity to contract',
+      lockLPTokens,
+      'Lock LP Tokens in stopLoss contract',
     );
   };
 
@@ -78,19 +78,20 @@ const start = async (zcf) => {
     return liquiditySeat;
   };
 
-  const getLiquidityBalance = () =>
-    stopLossSeat.getAmountAllocated(
-      'Liquidity',
-      zcf.getBrandForIssuer(liquidityIssuer),
+  const getBalanceByBrand = (keyword, issuer) => {
+    return stopLossSeat.getAmountAllocated(
+      keyword,
+      zcf.getBrandForIssuer(issuer),
     );
+  };
 
   // Contract facets
   const publicFacet = Far('public facet', {
-    getLiquidityBalance,
+    getBalanceByBrand,
   });
 
   const creatorFacet = Far('creator facet', {
-    makeAddLiquidityToContractInvitation,
+    makeLockLPTokensInvitation,
     removeAssetsFromAmm,
   });
 
