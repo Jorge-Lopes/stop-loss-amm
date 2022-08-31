@@ -94,14 +94,23 @@ const start = async (zcf) => {
     return amountOut;
   };
 
-  const getQuoteWhenFromCentral = async (valueIn, valueOut) => {
+  const getQuoteWhenGreaterFromCentral = async (valueIn, valueOut) => {
     const { fromCentral: priceAuthority } = await E(ammPublicFacet).getPriceAuthorities(secondaryBrand);
     const quoteWhenGTE = E(priceAuthority).quoteWhenGTE(
       centralAmount(valueIn), 
-      secondaryAmount(valueOut)
+      secondaryAmount(valueOut),
     );
     return quoteWhenGTE;
   };
+
+  const getQuoteWhenLowerFromCentral = async (valueIn, valueOut) => {
+    const { fromCentral: priceAuthority } = await E(ammPublicFacet).getPriceAuthorities(secondaryBrand);
+    const quoteWhenLTE = E(priceAuthority).quoteWhenLTE(
+      centralAmount(valueIn), 
+      secondaryAmount(valueOut),
+    );
+    return quoteWhenLTE;
+  }
 
   const getBalanceByBrand = (keyword, issuer) => {
     return stopLossSeat.getAmountAllocated(
@@ -110,13 +119,12 @@ const start = async (zcf) => {
     );
   };
 
- 
-
   // Contract facets
   const publicFacet = Far('public facet', {
     getBalanceByBrand,
     getQuotefromCentral,
-    getQuoteWhenFromCentral,
+    getQuoteWhenGreaterFromCentral,
+    getQuoteWhenLowerFromCentral,
   });
 
   const creatorFacet = Far('creator facet', {
