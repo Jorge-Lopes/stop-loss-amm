@@ -7,6 +7,7 @@ import {
   startAmmPool,
   startServices,
   startStopLoss,
+  swap,
 } from './helper.js';
 import { E } from '@endo/far';
 
@@ -327,9 +328,10 @@ test('Test get Quote When from AMM', async (t) => {
   t.deepEqual(addLiquidityMessage, 'Liquidity locked in the value of 30000');
   t.deepEqual(addLiquidityTokenBalance, liquidityAmount); // Make sure the balance in the contract is as expected
 
-  const quoteWhenGTE = await E(publicFacet).getQuoteWhenFromCentral(10_000n, 16_000n);
-  
-  // Work in progress
+  const quote = await E(publicFacet).getQuotefromCentral(10_000n);
+  t.log(quote);
+
+  const quoteWhenGTE = E(publicFacet).getQuoteWhenFromCentral(10_000n, 16_000n);
   let abovePriceQuote;
   quoteWhenGTE.then(
     result => (abovePriceQuote = result),
@@ -338,6 +340,26 @@ test('Test get Quote When from AMM', async (t) => {
         throw reason;
       }),
   );
-  t.log(abovePriceQuote);
 
+  t.falsy(abovePriceQuote);
+
+  // made a swap to change the quote and triger the quoteWhen promise
+  const secondaryValueIn = 2_000n;
+  const swapSeat = swap(
+    zoe,
+    ammPublicFacet,
+    secondaryR,
+    centralR,
+    liquidityIssuer,
+    secondaryValueIn,
+  );
+  t.is(await E(swapSeat).getOfferResult(), 'Swap successfully completed.');
+
+
+  await quoteWhenGTE;
+  t.truthy(abovePriceQuote);
+  assert(abovePriceQuote);
+
+  const updatedQuote = await E(publicFacet).getQuotefromCentral(10_000n);
+  t.log(updatedQuote);
 });

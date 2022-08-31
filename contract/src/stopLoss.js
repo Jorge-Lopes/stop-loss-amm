@@ -97,7 +97,7 @@ const start = async (zcf) => {
   // Work in progress
   const getQuoteWhenFromCentral = async (valueIn, valueOut) => {
     const { fromCentral: priceAuthority } = await E(ammPublicFacet).getPriceAuthorities(secondaryBrand);
-    const quoteWhenGTE = await E(priceAuthority).quoteWhenGTE(
+    const quoteWhenGTE = E(priceAuthority).quoteWhenGTE(
       centralAmount(valueIn), 
       secondaryAmount(valueOut)
     );
