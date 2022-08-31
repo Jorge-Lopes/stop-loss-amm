@@ -50,7 +50,9 @@ const start = async (zcf) => {
   /* 
   Questions:
     how should I use "deposited"?
-    Should the liquidity be reallocated from "liquiditySeat" to the "stopLossSeat"?
+    Should the liquidity(central and secondary) be reallocated from "liquiditySeat" to the "stopLossSeat"?
+    - check again considering that the amount await was added.
+    pay attention to the diference in value of input and output liquidity from the amm
   */
   const removeLiquidityFromAmm = async () => {
     const removeLiquidityInvitation =
@@ -77,9 +79,9 @@ const start = async (zcf) => {
       undefined,
       proposal,
       stopLossSeat,
-      stopLossSeat,
-      undefined,
     );
+
+    const amount = await deposited;
 
     return liquiditySeat;
   };
@@ -94,6 +96,8 @@ const start = async (zcf) => {
     return amountOut;
   };
 
+
+  // test if the from central and from secondary resolve at the same time
   const getQuoteWhenGreaterFromCentral = async (valueIn, valueOut) => {
     const { fromCentral: priceAuthority } = await E(ammPublicFacet).getPriceAuthorities(secondaryBrand);
     const quoteWhenGTE = E(priceAuthority).quoteWhenGTE(
@@ -137,6 +141,17 @@ const start = async (zcf) => {
 harden(start);
 export { start };
 
+/*
+// next steps:
+  remove,
+    - check input and output value
+    - check liquiditySeat
+    - check allocation of the liquidity
+
+  tests
+    - comment the tests to explain their purpose
+*/
+
 /* Code structure:
   
   terms: ammPublicFacet, stopRatioUpperLimit, stopRatioLowerLimit,  secondaryBrand;
@@ -152,6 +167,7 @@ export { start };
   getQuote () => {}
 
   isStopRatio () => {
+    // if one bounder resolves, the other should be canceled
       removeLiquidity ()
   }
 
@@ -161,6 +177,8 @@ export { start };
   }
 
   withdrawLiquidity () => {}
+
+  withdrawLPtoken () => {}
 
   publicFacet ({
       getQuote

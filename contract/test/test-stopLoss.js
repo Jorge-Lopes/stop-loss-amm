@@ -329,20 +329,10 @@ test('Test get Quote When GTE from Central', async (t) => {
   t.deepEqual(addLiquidityMessage, 'Liquidity locked in the value of 30000');
   t.deepEqual(addLiquidityTokenBalance, liquidityAmount); // Make sure the balance in the contract is as expected
 
-  const quoteWhenGTE = E(publicFacet).getQuoteWhenGreaterFromCentral(10_000n, 16_000n);
+  const quote = await E(publicFacet).getQuotefromCentral(10_000n);
+  t.truthy(quote.value <= 16_000n); // verify that quote is under the valueOut defined next
   
-  let abovePriceQuote;
-  quoteWhenGTE.then(
-    result => (abovePriceQuote = result),
-    reason =>
-      t.notThrows(() => {
-        throw reason;
-      }),
-  );
-
-  t.falsy(abovePriceQuote);
-
-  // made a swap to change the quote and triger the quoteWhen promise
+  // make a swap to change the quote and triger the quoteWhen promise
   const secondaryValueIn = 2_000n;
   const swapSeat = swapSecondaryForCentral(
     zoe,
@@ -354,8 +344,11 @@ test('Test get Quote When GTE from Central', async (t) => {
   );
   t.is(await E(swapSeat).getOfferResult(), 'Swap successfully completed.');
 
-  await quoteWhenGTE;
-  t.truthy(abovePriceQuote);
+  const quoteWhenGTE = await E(publicFacet).getQuoteWhenGreaterFromCentral(10_000n, 16_000n);
+  t.truthy(quoteWhenGTE); // verify that the promise was resolved and a quote was returned
+
+  const updatedQuote = await E(publicFacet).getQuotefromCentral(10_000n);
+  t.truthy(updatedQuote.value >= 16_000n)// verify that quote is above the valueOut defined above
 
 });
 
@@ -433,22 +426,9 @@ test('Test get Quote When LTE from Central', async (t) => {
   t.deepEqual(addLiquidityTokenBalance, liquidityAmount); // Make sure the balance in the contract is as expected
 
   const quote = await E(publicFacet).getQuotefromCentral(10_000n);
-  t.log(quote);
-
-  const quoteWhenLTE = E(publicFacet).getQuoteWhenLowerFromCentral(10_000n, 15_000n);
+  t.truthy(quote.value>= 15_000n); // verify that quote is above the valueOut defined next
   
-  let underPriceQuote;
-  quoteWhenLTE.then(
-    result => (underPriceQuote = result),
-    reason =>
-      t.notThrows(() => {
-        throw reason;
-      }),
-  );
-
-  t.falsy(underPriceQuote);
-
-  // made a swap to change the quote and triger the quoteWhen promise
+  // make a swap to change the quote and triger the quoteWhen promise
   const centralValueIn = 2_000n;
   const swapSeat = swapCentralForSecondary(
     zoe,
@@ -460,10 +440,10 @@ test('Test get Quote When LTE from Central', async (t) => {
   );
   t.is(await E(swapSeat).getOfferResult(), 'Swap successfully completed.');
 
-  await quoteWhenLTE;
-  t.truthy(underPriceQuote);
+  const quoteWhenLTE = await E(publicFacet).getQuoteWhenLowerFromCentral(10_000n, 15_000n);
+  t.truthy(quoteWhenLTE); // verify that the promise was resolved and a quote was returned
 
   const updatedQuote = await E(publicFacet).getQuotefromCentral(10_000n);
-  t.log(updatedQuote);
+  t.truthy(updatedQuote.value <= 15_000n)// verify that quote is under the valueOut defined above
 
 });
