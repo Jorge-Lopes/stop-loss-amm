@@ -128,5 +128,42 @@ export const makeLiquidityInvitations = async (
     return swapSeat;
   };
 
-  return { addLiquidity, removeLiquidity, swapSecondaryForCentral };
+  const swapCentralForSecondary = async (centralValueIn) => {
+    const invitationIssuer = await E(zoe).getInvitationIssuer();
+    const swapInvitation = E(ammPublicFacet).makeSwapInInvitation();
+    const { value } = await E(invitationIssuer).getAmountOf(swapInvitation);
+
+    assert(Array.isArray(value)); // non-fungible
+    const [invitationValue] = value;
+    const swapPublicFacet = await E(zoe).getPublicFacet(
+      invitationValue.instance,
+    );
+
+    const { amountOut: secondaryAmountOut } = await E(
+      swapPublicFacet,
+    ).getInputPrice(
+      makeCentral(centralValueIn),
+      AmountMath.makeEmpty(secondaryR.brand),
+    );
+
+    const centralForSecondaryProposal = harden({
+      want: { Out: secondaryAmountOut },
+      give: { In: makeCentral(centralValueIn) },
+    });
+
+    const centralPayment = centralR.mint.mintPayment(
+      makeCentral(centralValueIn),
+    );
+    const centralForSecondaryPayments = harden({ In: centralPayment});
+
+    const swapSeat = await E(zoe).offer(
+      swapInvitation,
+      centralForSecondaryProposal,
+      centralForSecondaryPayments,
+    );
+
+    return swapSeat;
+  };
+
+  return { addLiquidity, removeLiquidity, swapSecondaryForCentral, swapCentralForSecondary };
 };

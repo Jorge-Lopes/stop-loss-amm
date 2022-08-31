@@ -111,7 +111,7 @@ export async function removeLiquidityToPool(
   return payoutRemove;
 }
 
-export async function swap(
+export async function swapSecondaryForCentral(
   zoe,
   ammPublicFacet,
   secondaryR,
@@ -128,6 +128,26 @@ export async function swap(
   );
 
   const swapSeat = await swapSecondaryForCentral(secondaryValueIn);
+  return swapSeat;
+}
+
+export async function swapCentralForSecondary(
+  zoe,
+  ammPublicFacet,
+  secondaryR,
+  centralR,
+  liquidityIssuer,
+  centralValueIn,
+) {
+  const { swapCentralForSecondary } = await makeLiquidityInvitations(
+    zoe,
+    ammPublicFacet,
+    secondaryR,
+    centralR,
+    liquidityIssuer,
+  );
+
+  const swapSeat = await swapCentralForSecondary(centralValueIn);
   return swapSeat;
 }
 
