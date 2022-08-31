@@ -328,10 +328,8 @@ test('Test get Quote When from AMM', async (t) => {
   t.deepEqual(addLiquidityMessage, 'Liquidity locked in the value of 30000');
   t.deepEqual(addLiquidityTokenBalance, liquidityAmount); // Make sure the balance in the contract is as expected
 
-  const quote = await E(publicFacet).getQuotefromCentral(10_000n);
-  t.log(quote);
-
   const quoteWhenGTE = E(publicFacet).getQuoteWhenFromCentral(10_000n, 16_000n);
+  
   let abovePriceQuote;
   quoteWhenGTE.then(
     result => (abovePriceQuote = result),
@@ -355,11 +353,7 @@ test('Test get Quote When from AMM', async (t) => {
   );
   t.is(await E(swapSeat).getOfferResult(), 'Swap successfully completed.');
 
-
   await quoteWhenGTE;
   t.truthy(abovePriceQuote);
-  assert(abovePriceQuote);
 
-  const updatedQuote = await E(publicFacet).getQuotefromCentral(10_000n);
-  t.log(updatedQuote);
 });

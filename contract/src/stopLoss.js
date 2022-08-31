@@ -94,7 +94,6 @@ const start = async (zcf) => {
     return amountOut;
   };
 
-  // Work in progress
   const getQuoteWhenFromCentral = async (valueIn, valueOut) => {
     const { fromCentral: priceAuthority } = await E(ammPublicFacet).getPriceAuthorities(secondaryBrand);
     const quoteWhenGTE = E(priceAuthority).quoteWhenGTE(
@@ -110,6 +109,8 @@ const start = async (zcf) => {
       zcf.getBrandForIssuer(issuer),
     );
   };
+
+ 
 
   // Contract facets
   const publicFacet = Far('public facet', {
