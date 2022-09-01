@@ -159,7 +159,9 @@ test('Test remove Liquidity from AMM', async (t) => {
   t.deepEqual(addLiquidityTokenBalance, liquidityAmount); // Make sure the balance in the contract is as expected
 
   // remove Assets from AMM
-  await E(creatorFacet).removeLiquidityFromAmm();
+  const removeLiquidityMessage = await E(creatorFacet).removeLiquidityFromAmm();
+  t.deepEqual(removeLiquidityMessage, 'Liquidity successfully removed.')
+  
   const [centralBalance, secondaryBalance, lpTokenBalance] = await Promise.all([
     E(publicFacet).getBalanceByBrand('Central', centralIssuer),
     E(publicFacet).getBalanceByBrand('Secondary', secondaryIssuer),
