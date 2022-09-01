@@ -71,11 +71,10 @@ const start = async (zcf) => {
       undefined,
       proposal,
       stopLossSeat,
-      stopLossSeat,
-      undefined,
     );
 
-    return liquiditySeat;
+    await Promise.all([deposited, E(liquiditySeat).getOfferResult()]);
+
   };
 
   const getBalanceByBrand = (keyword, issuer) => {

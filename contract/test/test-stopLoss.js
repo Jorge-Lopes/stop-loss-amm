@@ -15,7 +15,7 @@ test.before(async (t) => {
   t.context = { bundleCache };
 });
 
-test('Test add Liquidity to contract', async (t) => {
+test('Test lock LP Tokens to contract', async (t) => {
   const { zoe, amm, centralR, secondaryR } = await startServices(t);
   const centralInitialValue = 10_000n;
   const secondaryInitialValue = 20_000n;
@@ -85,7 +85,7 @@ test('Test add Liquidity to contract', async (t) => {
   t.deepEqual(liquidityBalance, liquidityAmount); // Make sure the balance in the contract is as expected
 });
 
-test('Test remove Assets from AMM', async (t) => {
+test('Test remove Liquidity from AMM', async (t) => {
   const { zoe, amm, centralR, secondaryR } = await startServices(t);
   const centralInitialValue = 10_000n;
   const secondaryInitialValue = 20_000n;
@@ -159,18 +159,16 @@ test('Test remove Assets from AMM', async (t) => {
   t.deepEqual(addLiquidityTokenBalance, liquidityAmount); // Make sure the balance in the contract is as expected
 
   // remove Assets from AMM
-  const removeLiquiditySeat = await E(creatorFacet).removeLiquidityFromAmm();
-  const [removeLiquidityMessage, removeLiquidityTokenBalance] = await Promise.all([
-    E(removeLiquiditySeat).getOfferResult(),
-    E(publicFacet).getBalanceByBrand('Liquidity', liquidityIssuer),
-  ]);
+  await E(creatorFacet).removeLiquidityFromAmm();
+  const [centralBalance, secondaryBalance, lpTokenBalance] = await Promise.all([
+    E(publicFacet).getBalanceByBrand('Central', centralIssuer),
+    E(publicFacet).getBalanceByBrand('Secondary', secondaryIssuer),
+    E(publicFacet).getBalanceByBrand('Amm', liquidityIssuer),
+  ])
 
-  t.deepEqual(removeLiquidityMessage, 'Liquidity successfully removed.');
-  t.deepEqual(removeLiquidityTokenBalance.value, 0n);
-
-  const {Central: centralTokenBalance, Secondary: secondaryTokenBalance} = await E(removeLiquiditySeat).getCurrentAllocation();
-
-  t.deepEqual(centralTokenBalance.value, 30_000n);
-  t.deepEqual(secondaryTokenBalance.value, 60_000n);
+  // verify that balance holded in stopLoss seat was correctly updated
+  t.deepEqual(centralBalance.value, 30_000n);
+  t.deepEqual(secondaryBalance.value, 60_000n);
+  t.deepEqual(lpTokenBalance.value, 0n);
 
 });
