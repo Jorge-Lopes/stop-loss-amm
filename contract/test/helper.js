@@ -1,23 +1,31 @@
 // @ts-check
 
-import { AmountMath, makeIssuerKit } from '@agoric/ertp';
+import { AmountMath, makeIssuerKit, AssetKind } from '@agoric/ertp';
 import { assertPayoutAmount } from '@agoric/zoe/test/zoeTestHelpers.js';
 import buildManualTimer from '@agoric/zoe/tools/manualTimer.js';
 import { E } from '@endo/far';
 import { makeLiquidityInvitations } from './ammLiquidity.js';
 import { setupAmmServices, setupStopLoss } from './setup.js';
+import { getAmountOut } from '@agoric/zoe/src/contractSupport/priceQuote.js';
+import { floorMultiplyBy, makeRatio, makeRatioFromAmounts } from '@agoric/zoe/src/contractSupport/ratio.js';
 
 /*
   This file act as a bridge beetween the tests and the functions exported by ./ammLiquidity.js,
   the function makeAssertPayouts allow us to confirm if a payout returns what is expected;
 */
 
+export const makeAssets = () => {
+  const centralR = makeIssuerKit('Central', AssetKind.NAT, harden({ decimalPlaces: 8 }));
+  const secondaryR = makeIssuerKit('Secondary', AssetKind.NAT, harden({ decimalPlaces: 8 }));
+
+  return { centralR, secondaryR };
+};
+
 export async function startServices(t) {
   const electorateTerms = { committeeName: 'EnBancPanel', committeeSize: 3 };
   const timer = buildManualTimer(console.log);
 
-  const centralR = makeIssuerKit('Central');
-  const secondaryR = makeIssuerKit('Secondary');
+  const { centralR, secondaryR } = makeAssets();
 
   const { zoe, amm } = await setupAmmServices(
     t,
@@ -85,9 +93,7 @@ export async function addLiquidityToPool(
     liquidityIssuer,
   );
 
-  const payout = await addLiquidity(secondaryValue, centralValue);
-
-  return payout;
+  return addLiquidity(secondaryValue, centralValue);
 }
 
 export async function removeLiquidityToPool(
@@ -202,3 +208,43 @@ export async function startStopLoss(zoe, issuerKeywordRecord, terms) {
 
   return { publicFacet, creatorFacet };
 }
+
+/**
+ * This function gets the current price for a pair from the AMM and calculates
+ * an upper and a lower boundry for stopLoss contract.
+ *
+ * We do the calculation by asking the current price to `fromCentral` priceAuthority
+ * we get from the pool. Then we add and substract an amount we calculated from a ratio
+ * called `boundryMarginRatio`.
+ *
+ * @param {PriceAuthority} fromCentralPA
+ * @param {Amount} centralAmountIn
+ * @param {Brand} secondaryBrand
+ * @param {BigInt} boundryMarginValue
+ */
+export const getBoundries =
+  async (fromCentralPA, centralAmountIn,
+         secondaryBrand, boundryMarginValue = 20n) => {
+
+    const quote = await E(fromCentralPA).quoteGiven(
+      centralAmountIn,
+      secondaryBrand,
+    );
+
+    const boundryMarginRatio = makeRatio(boundryMarginValue, secondaryBrand);
+    const baseAmountOut = getAmountOut(quote);
+    const marginAmount = floorMultiplyBy(baseAmountOut, boundryMarginRatio);
+
+    return {
+      lower: makeRatioFromAmounts(
+        AmountMath.subtract(baseAmountOut, marginAmount),
+        centralAmountIn,
+      ),
+      upper: makeRatioFromAmounts(
+        AmountMath.add(baseAmountOut, marginAmount),
+        centralAmountIn,
+      ),
+      base: makeRatioFromAmounts(baseAmountOut, centralAmountIn),
+      marginAmount
+    };
+  };

@@ -33,7 +33,8 @@
     "@agoric/notifier": "beta",
     "@agoric/store": "beta",
     "@endo/far": "0.2.3",
-    "@agoric/zoe": "beta"
+    "@agoric/zoe": "beta",
+    "@endo/promise-kit": "0.2.41"
   },
   "ava": {
     "files": [
