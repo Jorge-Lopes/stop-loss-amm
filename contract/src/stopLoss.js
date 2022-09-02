@@ -7,7 +7,7 @@ import {
 import { Far, E } from '@endo/far';
 import { AmountMath } from '@agoric/ertp';
 import { offerTo } from '@agoric/zoe/src/contractSupport/index.js';
-import { makeNotifierKit } from '@agoric/notifier';
+import { makeAsyncIterableFromNotifier, makeNotifierKit } from '@agoric/notifier';
 
 const start = async (zcf) => {
   const { ammPublicFacet, centralIssuer, secondaryIssuer, liquidityIssuer } =
@@ -21,18 +21,17 @@ const start = async (zcf) => {
   const secondaryBrand = zcf.getBrandForIssuer(secondaryIssuer);
   const lpTokenBrand = zcf.getBrandForIssuer(liquidityIssuer);
 
-    // TODO: consider substitute this with AmountMath.makeEmpty()
+  // TODO: consider substitute this with AmountMath.makeEmpty()
   const centralAmount = (value) => AmountMath.make(centralBrand, value);
   const secondaryAmount = (value) => AmountMath.make(secondaryBrand, value);
 
   const state = {
-    phase: 'ACTIVE', // other phases might be things like LIQ_REMOVED
+    phase: 'ACTIVE',
     lpBalance: stopLossSeat.getAmountAllocated('Liquidity', lpTokenBrand),
     liquidityBalance: {
          central: stopLossSeat.getAmountAllocated('Central', centralBrand),
          secondary: stopLossSeat.getAmountAllocated('Secondary', secondaryBrand),
     }
-    // We can expand the metadata as  needed
   }
 
   const makeLockLPTokensInvitation = () => {
@@ -93,7 +92,7 @@ const start = async (zcf) => {
 
     await Promise.all([deposited, E(liquiditySeat).getOfferResult()]);
 
-    updater.updateState(state);
+    updater.finish(state);
 
     return E(liquiditySeat).getOfferResult();
   };
@@ -105,8 +104,6 @@ const start = async (zcf) => {
     );
   };
 
-  const notifyUser = () => notifier.getUpdateSince()
-
   // Contract facets
   const publicFacet = Far('public facet', {
     getBalanceByBrand,
@@ -115,7 +112,7 @@ const start = async (zcf) => {
   const creatorFacet = Far('creator facet', {
     makeLockLPTokensInvitation,
     removeLiquidityFromAmm,
-    notifyUser,
+    getNotifier: () => notifier,
   });
 
   return harden({ publicFacet, creatorFacet });

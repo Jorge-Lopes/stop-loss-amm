@@ -169,6 +169,7 @@ test('Test remove Liquidity from AMM', async (t) => {
   ])
 
   // verify that balance holded in stopLoss seat was correctly updated
+  // TODO: verify with the amounts instead of values
   t.deepEqual(centralBalance.value, 30_000n);
   t.deepEqual(secondaryBalance.value, 60_000n);
   t.deepEqual(lpTokenBalance.value, 0n);
@@ -235,7 +236,7 @@ test('Test notifier', async (t) => {
   const proposal = harden({ give: { Liquidity: liquidityAmount } });
   const paymentKeywordRecord = harden({ Liquidity: Liquidity });
 
-  const addLiquiditSeat = await E(zoe).offer(
+  await E(zoe).offer(
     addLiquidityInvitation,
     proposal,
     paymentKeywordRecord,
@@ -243,9 +244,17 @@ test('Test notifier', async (t) => {
 
   await E(creatorFacet).removeLiquidityFromAmm();
 
-  const allocation = await E(creatorFacet).notifyUser();
-  t.log(allocation.value)
+  const [centralBalance, secondaryBalance, lpTokenBalance] = await Promise.all([
+    E(publicFacet).getBalanceByBrand('Central', centralIssuer),
+    E(publicFacet).getBalanceByBrand('Secondary', secondaryIssuer),
+    E(publicFacet).getBalanceByBrand('Amm', liquidityIssuer),
+  ])
+
+  // verify that balance holded in stopLoss seat was correctly updated
+  t.deepEqual(centralBalance.value, 30_000n);
+  t.deepEqual(secondaryBalance.value, 60_000n);
+  t.deepEqual(lpTokenBalance.value, 0n);
+
   
-  t.deepEqual('dummy', 'dummy');
 
 });
