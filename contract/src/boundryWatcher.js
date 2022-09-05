@@ -26,7 +26,9 @@ export const makeBoundryWatcher = ({
   const { upper, lower } = boundries;
 
   // Get mutable quotes
+  /** @type MutableQuote */
   const upperBoundryMutableQuote = E(fromCentralPriceAuthority).mutableQuoteWhenGT(upper.denominator, upper.numerator);
+  /** @type MutableQuote */
   const lowerBoundryMutableQuote = E(fromCentralPriceAuthority).mutableQuoteWhenLT(lower.denominator, lower.numerator);
 
   // Get promises from mutable quotes

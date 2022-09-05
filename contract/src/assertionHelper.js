@@ -22,4 +22,4 @@ export const assertBoundryShape = (boundries, centralBrand, secondaryBrand) => {
 
   assert(lower.numerator.brand === secondaryBrand, X`Numerator of the lower ratio should be of the brand: ${secondaryBrand}`);
   assert(lower.denominator.brand === centralBrand, X`Denominator of the lower ratio should be of the brand: ${centralBrand}`);
-}
+};

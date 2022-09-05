@@ -7,14 +7,33 @@ import {
   startAmmPool,
   startServices,
   startStopLoss,
-  swapSecondaryForCentral, 
-  swapCentralForSecondary,
+  swapSecondaryForCentral,
+  swapCentralForSecondary, getBoundries, moveFromCentralPriceUp,
 } from './helper.js';
 import { E } from '@endo/far';
+import { AmountMath } from '@agoric/ertp/src/amountMath.js';
+import { makeRatioFromAmounts } from '@agoric/zoe/src/contractSupport/ratio.js';
+import { waitForPromisesToSettle } from '@agoric/run-protocol/test/supports.js';
 
 test.before(async (t) => {
   const bundleCache = await unsafeMakeBundleCache('./bundles/');
-  t.context = { bundleCache };
+
+  const makeAmountBuilderInUnit = (brand, displayInfo) => {
+
+    const { decimalPlaces } = displayInfo;
+
+    /**
+     * @param {BigInt} value
+     * @returns {Amount<K>}
+     */
+    const makeAmount = value => {
+      return AmountMath.make(brand, value * 10n ** BigInt(decimalPlaces));
+    };
+
+    return { makeAmount };
+  };
+
+  t.context = { bundleCache, makeAmountBuilderInUnit };
 });
 
 test('Test lock LP tokens in contract', async (t) => {
@@ -22,6 +41,12 @@ test('Test lock LP tokens in contract', async (t) => {
   const centralInitialValue = 10_000n;
   const secondaryInitialValue = 20_000n;
 
+  const { makeAmountBuilderInUnit } = t.context;
+
+  const { makeAmount: centralInUnit } = makeAmountBuilderInUnit(centralR.brand, centralR.displayInfo);
+  const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
+
+  /** @type XYKAMMPublicFacet */
   const ammPublicFacet = amm.ammPublicFacet;
 
   const { liquidityIssuer } = await startAmmPool(
@@ -34,8 +59,8 @@ test('Test lock LP tokens in contract', async (t) => {
   );
 
   // Add liquidity offer (secondary:central) 40_000:30_000.
-  const centralValue = 30_000n;
-  const secondaryValue = 70_000n;
+  const centralValue = 30n;
+  const secondaryValue = 70n;
 
   const payout = await addLiquidityToPool(
     zoe,
@@ -48,16 +73,22 @@ test('Test lock LP tokens in contract', async (t) => {
   );
 
   const { Liquidity } = payout;
-  const liquidityAmount = await E(liquidityIssuer).getAmountOf(Liquidity);
+  const [liquidityAmount, { fromCentral: fromCentralPA }] = await Promise.all([
+    E(liquidityIssuer).getAmountOf(Liquidity),
+    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand)
+  ]);
 
   const centralIssuer = centralR.issuer;
   const secondaryIssuer = secondaryR.issuer;
+
+  const boundries = await getBoundries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
 
   const terms = {
     ammPublicFacet,
     centralIssuer,
     secondaryIssuer,
     liquidityIssuer,
+    boundries
   };
 
   const issuerKeywordRecord = harden({
@@ -92,7 +123,13 @@ test('Test remove Liquidity from AMM', async (t) => {
   const centralInitialValue = 10_000n;
   const secondaryInitialValue = 20_000n;
 
+  /** @type XYKAMMPublicFacet */
   const ammPublicFacet = amm.ammPublicFacet;
+
+  const { makeAmountBuilderInUnit } = t.context;
+
+  const { makeAmount: centralInUnit } = makeAmountBuilderInUnit(centralR.brand, centralR.displayInfo);
+  const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
 
   const { liquidityIssuer } = await startAmmPool(
     zoe,
@@ -104,8 +141,8 @@ test('Test remove Liquidity from AMM', async (t) => {
   );
 
   // Add liquidity offer (secondary:central) 40_000:30_000.
-  const centralValue = 30_000n;
-  const secondaryValue = 70_000n;
+  const centralValue = 30n;
+  const secondaryValue = 70n;
 
   const payout = await addLiquidityToPool(
     zoe,
@@ -118,16 +155,22 @@ test('Test remove Liquidity from AMM', async (t) => {
   );
 
   const { Liquidity } = payout;
-  const liquidityAmount = await E(liquidityIssuer).getAmountOf(Liquidity);
+  const [liquidityAmount, { fromCentral: fromCentralPA }] = await Promise.all([
+    E(liquidityIssuer).getAmountOf(Liquidity),
+    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand)
+  ]);
 
   const centralIssuer = centralR.issuer;
   const secondaryIssuer = secondaryR.issuer;
+
+  const boundries = await getBoundries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
 
   const terms = {
     ammPublicFacet,
     centralIssuer,
     secondaryIssuer,
     liquidityIssuer,
+    boundries
   };
 
   const issuerKeywordRecord = harden({
@@ -183,7 +226,14 @@ test('Test get Quote Given from Central', async (t) => {
   const centralInitialValue = 10_000n;
   const secondaryInitialValue = 20_000n;
 
+  /** @type XYKAMMPublicFacet */
   const ammPublicFacet = amm.ammPublicFacet;
+
+  const { makeAmountBuilderInUnit } = t.context;
+
+  const { makeAmount: centralInUnit } = makeAmountBuilderInUnit(centralR.brand, centralR.displayInfo);
+  const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
+
 
   const { liquidityIssuer } = await startAmmPool(
     zoe,
@@ -195,8 +245,8 @@ test('Test get Quote Given from Central', async (t) => {
   );
 
   // Add liquidity offer (secondary:central) 40_000:30_000.
-  const centralValue = 30_000n;
-  const secondaryValue = 70_000n;
+  const centralValue = 30n;
+  const secondaryValue = 70n;
 
   const payout = await addLiquidityToPool(
     zoe,
@@ -209,16 +259,22 @@ test('Test get Quote Given from Central', async (t) => {
   );
 
   const { Liquidity } = payout;
-  const liquidityAmount = await E(liquidityIssuer).getAmountOf(Liquidity);
+  const [liquidityAmount, { fromCentral: fromCentralPA }] = await Promise.all([
+    E(liquidityIssuer).getAmountOf(Liquidity),
+    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand)
+  ]);
 
   const centralIssuer = centralR.issuer;
   const secondaryIssuer = secondaryR.issuer;
+
+  const boundries = await getBoundries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
 
   const terms = {
     ammPublicFacet,
     centralIssuer,
     secondaryIssuer,
     liquidityIssuer,
+    boundries
   };
 
   const issuerKeywordRecord = harden({
@@ -261,7 +317,14 @@ test('Test get Quote When GTE from Central', async (t) => {
   const centralInitialValue = 10_000n;
   const secondaryInitialValue = 20_000n;
 
+  /** @type XYKAMMPublicFacet */
   const ammPublicFacet = amm.ammPublicFacet;
+
+  const { makeAmountBuilderInUnit } = t.context;
+
+  const { makeAmount: centralInUnit } = makeAmountBuilderInUnit(centralR.brand, centralR.displayInfo);
+  const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
+
 
   const { liquidityIssuer } = await startAmmPool(
     zoe,
@@ -273,8 +336,8 @@ test('Test get Quote When GTE from Central', async (t) => {
   );
 
   // Add liquidity offer (secondary:central) 40_000:30_000.
-  const centralValue = 30_000n;
-  const secondaryValue = 70_000n;
+  const centralValue = 30n;
+  const secondaryValue = 70n;
 
   const payout = await addLiquidityToPool(
     zoe,
@@ -287,16 +350,22 @@ test('Test get Quote When GTE from Central', async (t) => {
   );
 
   const { Liquidity } = payout;
-  const liquidityAmount = await E(liquidityIssuer).getAmountOf(Liquidity);
+  const [liquidityAmount, { fromCentral: fromCentralPA }] = await Promise.all([
+    E(liquidityIssuer).getAmountOf(Liquidity),
+    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand)
+  ]);
 
   const centralIssuer = centralR.issuer;
   const secondaryIssuer = secondaryR.issuer;
+
+  const boundries = await getBoundries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
 
   const terms = {
     ammPublicFacet,
     centralIssuer,
     secondaryIssuer,
     liquidityIssuer,
+    boundries
   };
 
   const issuerKeywordRecord = harden({
@@ -357,7 +426,13 @@ test('Test get Quote When LTE from Central', async (t) => {
   const centralInitialValue = 10_000n;
   const secondaryInitialValue = 20_000n;
 
+  /** @type XYKAMMPublicFacet */
   const ammPublicFacet = amm.ammPublicFacet;
+
+  const { makeAmountBuilderInUnit } = t.context;
+
+  const { makeAmount: centralInUnit } = makeAmountBuilderInUnit(centralR.brand, centralR.displayInfo);
+  const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
 
   const { liquidityIssuer } = await startAmmPool(
     zoe,
@@ -369,8 +444,8 @@ test('Test get Quote When LTE from Central', async (t) => {
   );
 
   // Add liquidity offer (secondary:central) 40_000:30_000.
-  const centralValue = 30_000n;
-  const secondaryValue = 70_000n;
+  const centralValue = 30n;
+  const secondaryValue = 70n;
 
   const payout = await addLiquidityToPool(
     zoe,
@@ -383,16 +458,22 @@ test('Test get Quote When LTE from Central', async (t) => {
   );
 
   const { Liquidity } = payout;
-  const liquidityAmount = await E(liquidityIssuer).getAmountOf(Liquidity);
+  const [liquidityAmount, { fromCentral: fromCentralPA }] = await Promise.all([
+    E(liquidityIssuer).getAmountOf(Liquidity),
+    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand)
+  ]);
 
   const centralIssuer = centralR.issuer;
   const secondaryIssuer = secondaryR.issuer;
+
+  const boundries = await getBoundries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
 
   const terms = {
     ammPublicFacet,
     centralIssuer,
     secondaryIssuer,
     liquidityIssuer,
+    boundries
   };
 
   const issuerKeywordRecord = harden({
@@ -445,5 +526,111 @@ test('Test get Quote When LTE from Central', async (t) => {
 
   const updatedQuote = await E(publicFacet).getQuotefromCentral(10_000n);
   t.truthy(updatedQuote.value <= 15_000n)// verify that quote is under the valueOut defined above
+
+});
+
+test('trigger-lp-removal', async (t) => {
+  const { zoe, amm, centralR, secondaryR } = await startServices(t);
+  const centralInitialValue = 10_000n;
+  const secondaryInitialValue = 20_000n;
+
+  /** @type XYKAMMPublicFacet */
+  const ammPublicFacet = amm.ammPublicFacet;
+
+  const { makeAmountBuilderInUnit } = t.context;
+
+  const { makeAmount: centralInUnit } = makeAmountBuilderInUnit(centralR.brand, centralR.displayInfo);
+  const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
+
+  const { /** @type Issuer */ liquidityIssuer } = await startAmmPool(
+    zoe,
+    ammPublicFacet,
+    centralR,
+    secondaryR,
+    centralInitialValue,
+    secondaryInitialValue,
+  );
+
+  // Add liquidity offer (secondary:central) 40_000:30_000.
+  const centralValue = 30n;
+  const secondaryValue = 60n;
+
+  const payout = await addLiquidityToPool(
+    zoe,
+    ammPublicFacet,
+    centralR,
+    secondaryR,
+    liquidityIssuer,
+    centralValue,
+    secondaryValue,
+  );
+
+  const { Liquidity } = payout;
+  const [liquidityAmount, { fromCentral: fromCentralPA }] = await Promise.all([
+    E(liquidityIssuer).getAmountOf(Liquidity),
+    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand)
+  ]);
+
+  const centralIssuer = centralR.issuer;
+  const secondaryIssuer = secondaryR.issuer;
+
+  const boundries = await getBoundries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
+  console.log('BOUNDRIES', boundries);
+
+  const terms = {
+    ammPublicFacet,
+    centralIssuer,
+    secondaryIssuer,
+    liquidityIssuer,
+    boundries
+  };
+
+  const issuerKeywordRecord = harden({
+    Central: centralIssuer,
+    Secondary: secondaryIssuer,
+    Liquidity: liquidityIssuer,
+  });
+
+  const { creatorFacet, publicFacet } = await startStopLoss(
+    zoe,
+    issuerKeywordRecord,
+    terms,
+  );
+
+  const addLiquidityInvitation =
+    E(creatorFacet).makeLockLPTokensInvitation();
+  const proposal = harden({ give: { Liquidity: liquidityAmount } });
+  const paymentKeywordRecord = harden({ Liquidity: Liquidity });
+
+  const addLiquiditSeat = await E(zoe).offer(
+    addLiquidityInvitation,
+    proposal,
+    paymentKeywordRecord,
+  );
+  const [addLiquidityMessage, addLiquidityTokenBalance] = await Promise.all([
+    E(addLiquiditSeat).getOfferResult(),
+    E(publicFacet).getBalanceByBrand('Liquidity', liquidityIssuer),
+  ]);
+
+  t.deepEqual(addLiquidityMessage, `Liquidity locked in the value of ${liquidityAmount.value}`);
+  t.deepEqual(addLiquidityTokenBalance, liquidityAmount); // Make sure the balance in the contract is as expected
+
+  console.log('Moving the price up...')
+  const { inputPriceAmountOut: inputPriceAfter, swapInterval } = await moveFromCentralPriceUp(zoe, ammPublicFacet, secondaryR, centralR, liquidityIssuer, boundries.upper, 10n);
+  console.log('Done')
+  console.log("INPUT_PRICE_AFTER", inputPriceAfter);
+
+  await swapSecondaryForCentral(zoe, ammPublicFacet, secondaryR, centralR, liquidityIssuer, swapInterval);
+  await waitForPromisesToSettle();
+
+  const [liquidityAmountAllocated, centralAmountAllocated, secondaryAmountAllocated] = await Promise.all([
+    E(publicFacet).getBalanceByBrand('Liquidity', liquidityIssuer),
+    E(publicFacet).getBalanceByBrand('Central', centralR.issuer),
+    E(publicFacet).getBalanceByBrand('Secondary', secondaryR.issuer),
+  ]);
+
+  console.log('Liquidity', liquidityAmountAllocated);
+  console.log('Central', centralAmountAllocated);
+  console.log('Secondary', secondaryAmountAllocated);
 
 });

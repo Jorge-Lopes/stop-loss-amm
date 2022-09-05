@@ -30,8 +30,8 @@ export const makeLiquidityInvitations = async (
   centralR,
   liquidityIssuer,
 ) => {
-  const makeCentral = (value) => AmountMath.make(centralR.brand, value);
-  const makeSecondary = (value) => AmountMath.make(secondaryR.brand, value);
+  const makeCentral = (value) => AmountMath.make(centralR.brand, value * 10n ** BigInt(centralR.displayInfo.decimalPlaces));
+  const makeSecondary = (value) => AmountMath.make(secondaryR.brand, value * 10n ** BigInt(secondaryR.displayInfo.decimalPlaces));
   const liquidityBrand = await E(liquidityIssuer).getBrand();
   const liquidityAmounth = (value) =>
     AmountMath.make(liquidityBrand, value);
@@ -165,5 +165,12 @@ export const makeLiquidityInvitations = async (
     return swapSeat;
   };
 
-  return { addLiquidity, removeLiquidity, swapSecondaryForCentral, swapCentralForSecondary };
+  return harden({
+    addLiquidity,
+    removeLiquidity,
+    swapSecondaryForCentral,
+    swapCentralForSecondary,
+    makeCentral,
+    makeSecondary,
+  });
 };

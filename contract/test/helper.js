@@ -248,3 +248,37 @@ export const getBoundries =
       marginAmount
     };
   };
+
+/**
+ *
+ * @param {ZoeService} zoe
+ * @param {XYKAMMPublicFacet} ammPublicFacet
+ * @param {IssuerKit} secondaryR
+ * @param {IssuerKit} centralR
+ * @param {Issuer} liquidityIssuer
+ * @param {Ratio} upperBoundry
+ * @param {BigInt} swapInterval
+ * @returns {Promise<void>}
+ */
+export const moveFromCentralPriceUp = async (zoe,
+                                             ammPublicFacet,
+                                             secondaryR,
+                                             centralR,
+                                             liquidityIssuer,
+                                             upperBoundry,
+                                             swapInterval = 1n) => {
+  const { swapSecondaryForCentral, makeCentral, makeSecondary } = await makeLiquidityInvitations(zoe, ammPublicFacet, secondaryR, centralR, liquidityIssuer);
+
+  const { amountOut } = await E(ammPublicFacet).getInputPrice(makeCentral(1n), makeSecondary(0n));
+  let inputPriceAmountOut = amountOut
+
+  while (AmountMath.isGTE(upperBoundry.numerator, inputPriceAmountOut)){
+    await swapSecondaryForCentral(swapInterval);
+
+    const { amountOut } = await E(ammPublicFacet).getInputPrice(makeCentral(1n), makeSecondary(0n));
+    inputPriceAmountOut = amountOut;
+    // console.log('INTER_INPUT_PRICE', inputPriceAmountOut);
+  }
+
+  return { inputPriceAmountOut, swapInterval };
+}

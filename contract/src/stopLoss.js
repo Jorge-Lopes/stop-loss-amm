@@ -8,17 +8,60 @@ import {
 import { Far, E } from '@endo/far';
 import { AmountMath } from '@agoric/ertp';
 import { offerTo } from '@agoric/zoe/src/contractSupport/index.js';
+import { assertBoundryShape } from './assertionHelper.js';
+import { makeBoundryWatcher } from './boundryWatcher.js';
 
+/**
+ *
+ * @param {ZCF} zcf
+ */
 const start = async (zcf) => {
-  const { ammPublicFacet, centralIssuer, secondaryIssuer, liquidityIssuer } =
+  const {
+    /** @type XYKAMMPublicFacet */  ammPublicFacet,
+    /** @type Issuer */ centralIssuer,
+    /** @type Issuer */ secondaryIssuer,
+    /** @type Issuer */ liquidityIssuer,
+    boundries } =
     zcf.getTerms();
   assertIssuerKeywords(zcf, ['Central', 'Secondary', 'Liquidity']);
+
   const { zcfSeat: stopLossSeat } = zcf.makeEmptySeatKit();
 
   const centralBrand = zcf.getBrandForIssuer(centralIssuer);
   const secondaryBrand = zcf.getBrandForIssuer(secondaryIssuer);
+
+  assertBoundryShape(boundries, centralBrand, secondaryBrand);
+
   const centralAmount = (value) => AmountMath.make(centralBrand, value);
   const secondaryAmount = (value) => AmountMath.make(secondaryBrand, value);
+
+  const init = async () => {
+    const { fromCentral } = await E(ammPublicFacet).getPriceAuthorities(secondaryBrand);
+
+    return makeBoundryWatcher({
+      fromCentralPriceAuthority: fromCentral,
+      boundries,
+      centralBrand,
+      secondaryBrand,
+    })
+  };
+
+  // Initiate listening
+  const {
+    boundryWatcherPromise,
+    updateBoundries,
+  } = await init();
+
+  const schedule = async () => {
+    // Wait for the price boundry being violated
+    await boundryWatcherPromise;
+    // TODO Notify state changed to 'Removing'
+    console.log('REMOVING_LP_TOKENS')
+    await removeLiquidityFromAmm();
+  };
+
+  // Schedule a trigger for LP token removal
+  schedule().catch(err => console.log('SCHEDULE_ERROR', err)); // Notify user
 
   const makeLockLPTokensInvitation = () => {
     const lockLPTokens = (creatorSeat) => {
@@ -86,35 +129,9 @@ const start = async (zcf) => {
     return liquiditySeat;
   };
 
-  const getQuotefromCentral = async (value) => {
-    const { fromCentral: priceAuthority } = await E(ammPublicFacet).getPriceAuthorities(secondaryBrand);
-    const quoteGiven = await E(priceAuthority).quoteGiven(
-      centralAmount(value),
-      secondaryBrand,
-    );
-    const amountOut = getAmountOut(quoteGiven);
-    return amountOut;
+  const updateConfiguration = async boundries => {
+    return await updateBoundries(boundries);
   };
-
-
-  // test if the from central and from secondary resolve at the same time
-  const getQuoteWhenGreaterFromCentral = async (valueIn, valueOut) => {
-    const { fromCentral: priceAuthority } = await E(ammPublicFacet).getPriceAuthorities(secondaryBrand);
-    const quoteWhenGTE = E(priceAuthority).quoteWhenGTE(
-      centralAmount(valueIn), 
-      secondaryAmount(valueOut),
-    );
-    return quoteWhenGTE;
-  };
-
-  const getQuoteWhenLowerFromCentral = async (valueIn, valueOut) => {
-    const { fromCentral: priceAuthority } = await E(ammPublicFacet).getPriceAuthorities(secondaryBrand);
-    const quoteWhenLTE = E(priceAuthority).quoteWhenLTE(
-      centralAmount(valueIn), 
-      secondaryAmount(valueOut),
-    );
-    return quoteWhenLTE;
-  }
 
   const getBalanceByBrand = (keyword, issuer) => {
     return stopLossSeat.getAmountAllocated(
@@ -126,14 +143,12 @@ const start = async (zcf) => {
   // Contract facets
   const publicFacet = Far('public facet', {
     getBalanceByBrand,
-    getQuotefromCentral,
-    getQuoteWhenGreaterFromCentral,
-    getQuoteWhenLowerFromCentral,
   });
 
   const creatorFacet = Far('creator facet', {
     makeLockLPTokensInvitation,
     removeLiquidityFromAmm,
+    updateConfiguration,
   });
 
   return harden({ publicFacet, creatorFacet });

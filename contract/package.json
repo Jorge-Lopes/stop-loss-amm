@@ -34,7 +34,8 @@
     "@agoric/store": "beta",
     "@endo/far": "0.2.3",
     "@agoric/zoe": "beta",
-    "@endo/promise-kit": "0.2.41"
+    "@endo/promise-kit": "0.2.41",
+    "@agoric/run-protocol": "0.11.0"
   },
   "ava": {
     "files": [
