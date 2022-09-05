@@ -16,6 +16,9 @@ const start = async (zcf) => {
 
   const centralBrand = zcf.getBrandForIssuer(centralIssuer);
   const secondaryBrand = zcf.getBrandForIssuer(secondaryIssuer);
+  const lpTokenBrand = zcf.getBrandForIssuer(liquidityIssuer);
+
+    // TODO: consider substitute this with AmountMath.makeEmpty()
   const centralAmount = (value) => AmountMath.make(centralBrand, value);
   const secondaryAmount = (value) => AmountMath.make(secondaryBrand, value);
 
@@ -52,7 +55,7 @@ const start = async (zcf) => {
 
     const liquidityIn = stopLossSeat.getAmountAllocated(
       'Liquidity',
-      zcf.getBrandForIssuer(liquidityIssuer),
+      lpTokenBrand,
     );
 
     const proposal = harden({
@@ -71,11 +74,12 @@ const start = async (zcf) => {
       undefined,
       proposal,
       stopLossSeat,
-      stopLossSeat,
-      undefined,
     );
 
-    return liquiditySeat;
+    await Promise.all([deposited, E(liquiditySeat).getOfferResult()]);
+
+    return E(liquiditySeat).getOfferResult();
+
   };
 
   const getBalanceByBrand = (keyword, issuer) => {

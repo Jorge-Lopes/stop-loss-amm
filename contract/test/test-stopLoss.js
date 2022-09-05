@@ -9,13 +9,14 @@ import {
   startStopLoss,
 } from './helper.js';
 import { E } from '@endo/far';
+import { AmountMath } from '@agoric/ertp';
 
 test.before(async (t) => {
   const bundleCache = await unsafeMakeBundleCache('./bundles/');
   t.context = { bundleCache };
 });
 
-test('Test add Liquidity to contract', async (t) => {
+test('Test lock LP Tokens to contract', async (t) => {
   const { zoe, amm, centralR, secondaryR } = await startServices(t);
   const centralInitialValue = 10_000n;
   const secondaryInitialValue = 20_000n;
@@ -85,7 +86,7 @@ test('Test add Liquidity to contract', async (t) => {
   t.deepEqual(liquidityBalance, liquidityAmount); // Make sure the balance in the contract is as expected
 });
 
-test('Test remove Assets from AMM', async (t) => {
+test('Test remove Liquidity from AMM', async (t) => {
   const { zoe, amm, centralR, secondaryR } = await startServices(t);
   const centralInitialValue = 10_000n;
   const secondaryInitialValue = 20_000n;
@@ -159,18 +160,25 @@ test('Test remove Assets from AMM', async (t) => {
   t.deepEqual(addLiquidityTokenBalance, liquidityAmount); // Make sure the balance in the contract is as expected
 
   // remove Assets from AMM
-  const removeLiquiditySeat = await E(creatorFacet).removeLiquidityFromAmm();
-  const [removeLiquidityMessage, removeLiquidityTokenBalance] = await Promise.all([
-    E(removeLiquiditySeat).getOfferResult(),
-    E(publicFacet).getBalanceByBrand('Liquidity', liquidityIssuer),
-  ]);
+  const removeLiquidityMessage = await E(creatorFacet).removeLiquidityFromAmm();
+  t.deepEqual(removeLiquidityMessage, 'Liquidity successfully removed.')
+  
+  const [centralBalance, secondaryBalance, lpTokenBalance] = await Promise.all([
+    E(publicFacet).getBalanceByBrand('Central', centralIssuer),
+    E(publicFacet).getBalanceByBrand('Secondary', secondaryIssuer),
+    E(publicFacet).getBalanceByBrand('Amm', liquidityIssuer),
+  ])
 
-  t.deepEqual(removeLiquidityMessage, 'Liquidity successfully removed.');
-  t.deepEqual(removeLiquidityTokenBalance.value, 0n);
+  const centralBrand = centralR.brand;
+  const secondaryBrand = secondaryR.brand;
+  const liquidityBrand = await E(liquidityIssuer).getBrand();
+  const centralAmount = (value) => AmountMath.make(centralBrand, value);
+  const secondaryAmount = (value) => AmountMath.make(secondaryBrand, value);
+  const liquidityAmountTest = (value) => AmountMath.make(liquidityBrand, value);
 
-  const {Central: centralTokenBalance, Secondary: secondaryTokenBalance} = await E(removeLiquiditySeat).getCurrentAllocation();
-
-  t.deepEqual(centralTokenBalance.value, 30_000n);
-  t.deepEqual(secondaryTokenBalance.value, 60_000n);
+  // verify that balance holded in stopLoss seat was correctly updated
+  t.deepEqual(centralBalance, centralAmount(30_000n));
+  t.deepEqual(secondaryBalance, secondaryAmount(60_000n));
+  t.deepEqual(lpTokenBalance, liquidityAmountTest(0n));
 
 });
