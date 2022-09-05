@@ -226,7 +226,7 @@ test('Test notifier', async (t) => {
     Liquidity: liquidityIssuer,
   });
 
-  const { creatorFacet, publicFacet } = await startStopLoss(
+  const { creatorFacet } = await startStopLoss(
     zoe,
     issuerKeywordRecord,
     terms,
@@ -242,6 +242,9 @@ test('Test notifier', async (t) => {
     proposal,
     paymentKeywordRecord,
   );
+
+  // test notifier
+  // confirm the balances also with the stopLoss Seat balance
 
   await E(creatorFacet).removeLiquidityFromAmm();
 

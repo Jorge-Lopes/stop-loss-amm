@@ -19,14 +19,27 @@ const start = async (zcf) => {
   const secondaryBrand = zcf.getBrandForIssuer(secondaryIssuer);
   const lpTokenBrand = zcf.getBrandForIssuer(liquidityIssuer);
 
-  // TODO: consider substitute this with AmountMath.makeEmpty()
-  const centralAmount = (value) => AmountMath.make(centralBrand, value);
-  const secondaryAmount = (value) => AmountMath.make(secondaryBrand, value);
-
   const { updater, notifier } = makeNotifierKit();
-  const updateAllocationState = () => {
+
+  /**
+   * Constants for allocation phase,
+   *
+   * ACTIVE       - lp tokens locked in stopLoss seat 
+   * LIQUIDATING  - liquidity being withdraw from the amm pool to the stopLoss seat
+   * LIQUIDATED   - liquidity has been withdraw from the amm pool to the stopLoss seat
+   * CLOSED       - stopLoss was closed by the creator and all assets have been transfered to his seat
+   */
+  const AllocationPhase = ({
+    ACTIVE: 'active',
+    LIQUIDATING: 'liquidating',
+    LIQUIDATED: 'liquidated',
+    CLOSED: 'closed',
+  });
+
+
+  const updateAllocationState = (allocationPhase) => {
     const allocationState = harden({
-      phase: 'ACTIVE',
+      phase: allocationPhase,
       lpBalance: stopLossSeat.getAmountAllocated('Liquidity', lpTokenBrand),
       liquidityBalance: {
            central: stopLossSeat.getAmountAllocated('Central', centralBrand),
@@ -54,7 +67,7 @@ const start = async (zcf) => {
 
       creatorSeat.exit();
 
-      updateAllocationState();
+      updateAllocationState(AllocationPhase.ACTIVE);
 
       return `Liquidity locked in the value of ${liquidityAmount.value}`;
     };
@@ -76,8 +89,8 @@ const start = async (zcf) => {
 
     const proposal = harden({
       want: {
-        Central: centralAmount(0n),
-        Secondary: secondaryAmount(0n),
+        Central: AmountMath.makeEmpty(centralBrand),
+        Secondary: AmountMath.makeEmpty(secondaryBrand),
       },
       give: {
         Liquidity: liquidityIn,
@@ -94,7 +107,7 @@ const start = async (zcf) => {
 
     await Promise.all([deposited, E(liquiditySeat).getOfferResult()]);
 
-    updateAllocationState();
+    updateAllocationState(AllocationPhase.LIQUIDATED);
 
     return E(liquiditySeat).getOfferResult();
   };
