@@ -182,3 +182,93 @@ test('Test remove Liquidity from AMM', async (t) => {
   t.deepEqual(lpTokenBalance, liquidityAmountTest(0n));
 
 });
+
+test('Test notifier', async (t) => {
+  const { zoe, amm, centralR, secondaryR } = await startServices(t);
+  const centralInitialValue = 10_000n;
+  const secondaryInitialValue = 20_000n;
+
+  const ammPublicFacet = amm.ammPublicFacet;
+
+  const { liquidityIssuer } = await startAmmPool(
+    zoe,
+    ammPublicFacet,
+    centralR,
+    secondaryR,
+    centralInitialValue,
+    secondaryInitialValue,
+  );
+
+  // Add liquidity offer (secondary:central) 40_000:30_000.
+  const centralValue = 30_000n;
+  const secondaryValue = 70_000n;
+
+  const payout = await addLiquidityToPool(
+    zoe,
+    ammPublicFacet,
+    centralR,
+    secondaryR,
+    liquidityIssuer,
+    centralValue,
+    secondaryValue,
+  );
+
+  const { Liquidity } = payout;
+  const liquidityAmount = await E(liquidityIssuer).getAmountOf(Liquidity);
+
+  const centralIssuer = centralR.issuer;
+  const secondaryIssuer = secondaryR.issuer;
+
+  const terms = {
+    ammPublicFacet,
+    centralIssuer,
+    secondaryIssuer,
+    liquidityIssuer,
+  };
+
+  const issuerKeywordRecord = harden({
+    Central: centralIssuer,
+    Secondary: secondaryIssuer,
+    Liquidity: liquidityIssuer,
+  });
+
+  const { creatorFacet } = await startStopLoss(
+    zoe,
+    issuerKeywordRecord,
+    terms,
+  );
+
+  const addLiquidityInvitation =
+    E(creatorFacet).makeLockLPTokensInvitation();
+  const proposal = harden({ give: { Liquidity: liquidityAmount } });
+  const paymentKeywordRecord = harden({ Liquidity: Liquidity });
+
+  await E(zoe).offer(
+    addLiquidityInvitation,
+    proposal,
+    paymentKeywordRecord,
+  );
+
+  await E(creatorFacet).removeLiquidityFromAmm();
+
+  const allocationStateNotifier = await E(creatorFacet).getNotifier();
+  const {value: allocationState} = await E(allocationStateNotifier).getUpdateSince();
+
+  t.deepEqual(allocationState.phase, 'liquidated');
+
+  const centralBalance = allocationState.liquidityBalance.central;
+  const secondaryBalance = allocationState.liquidityBalance.secondary;
+  const lpTokenBalance = allocationState.lpBalance;
+
+  const centralBrand = centralR.brand;
+  const secondaryBrand = secondaryR.brand;
+  const liquidityBrand = await E(liquidityIssuer).getBrand();
+  const centralAmount = (value) => AmountMath.make(centralBrand, value);
+  const secondaryAmount = (value) => AmountMath.make(secondaryBrand, value);
+  const liquidityAmountTest = (value) => AmountMath.make(liquidityBrand, value);
+
+  // verify that balance holded in stopLoss seat was correctly updated
+  t.deepEqual(centralBalance, centralAmount(30_000n));
+  t.deepEqual(secondaryBalance, secondaryAmount(60_000n));
+  t.deepEqual(lpTokenBalance, liquidityAmountTest(0n));
+});

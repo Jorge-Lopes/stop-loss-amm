@@ -7,6 +7,7 @@ import {
 import { Far, E } from '@endo/far';
 import { AmountMath } from '@agoric/ertp';
 import { offerTo } from '@agoric/zoe/src/contractSupport/index.js';
+import { makeNotifierKit } from '@agoric/notifier';
 
 const start = async (zcf) => {
   const { ammPublicFacet, centralIssuer, secondaryIssuer, liquidityIssuer } =
@@ -18,9 +19,38 @@ const start = async (zcf) => {
   const secondaryBrand = zcf.getBrandForIssuer(secondaryIssuer);
   const lpTokenBrand = zcf.getBrandForIssuer(liquidityIssuer);
 
-    // TODO: consider substitute this with AmountMath.makeEmpty()
-  const centralAmount = (value) => AmountMath.make(centralBrand, value);
-  const secondaryAmount = (value) => AmountMath.make(secondaryBrand, value);
+  const { updater, notifier } = makeNotifierKit();
+
+  /**
+   * TODO: this object should be imported from constants.js
+   * Constants for allocation phase,
+   *
+   * ACTIVE       - lp tokens locked in stopLoss seat 
+   * LIQUIDATING  - liquidity being withdraw from the amm pool to the stopLoss seat
+   * LIQUIDATED   - liquidity has been withdraw from the amm pool to the stopLoss seat
+   * CLOSED       - stopLoss was closed by the creator and all assets have been transfered to his seat
+   * ERROR        - error catched in some process
+   */
+  const AllocationPhase = ({
+    ACTIVE: 'active',
+    LIQUIDATING: 'liquidating',
+    LIQUIDATED: 'liquidated',
+    CLOSED: 'closed',
+    ERROR: 'error,'
+  });
+
+  
+  const updateAllocationState = (allocationPhase) => {
+    const allocationState = harden({
+      phase: allocationPhase,
+      lpBalance: stopLossSeat.getAmountAllocated('Liquidity', lpTokenBrand),
+      liquidityBalance: {
+           central: stopLossSeat.getAmountAllocated('Central', centralBrand),
+           secondary: stopLossSeat.getAmountAllocated('Secondary', secondaryBrand),
+      }
+    });
+    updater.updateState(allocationState);
+  }
 
   const makeLockLPTokensInvitation = () => {
     const lockLPTokens = (creatorSeat) => {
@@ -39,6 +69,8 @@ const start = async (zcf) => {
       zcf.reallocate(stopLossSeat, creatorSeat);
 
       creatorSeat.exit();
+
+      updateAllocationState(AllocationPhase.ACTIVE);
 
       return `Liquidity locked in the value of ${liquidityAmount.value}`;
     };
@@ -60,8 +92,8 @@ const start = async (zcf) => {
 
     const proposal = harden({
       want: {
-        Central: centralAmount(0n),
-        Secondary: secondaryAmount(0n),
+        Central: AmountMath.makeEmpty(centralBrand),
+        Secondary: AmountMath.makeEmpty(secondaryBrand),
       },
       give: {
         Liquidity: liquidityIn,
@@ -78,8 +110,9 @@ const start = async (zcf) => {
 
     await Promise.all([deposited, E(liquiditySeat).getOfferResult()]);
 
-    return E(liquiditySeat).getOfferResult();
+    updateAllocationState(AllocationPhase.LIQUIDATED);
 
+    return E(liquiditySeat).getOfferResult();
   };
 
   const getBalanceByBrand = (keyword, issuer) => {
@@ -97,6 +130,7 @@ const start = async (zcf) => {
   const creatorFacet = Far('creator facet', {
     makeLockLPTokensInvitation,
     removeLiquidityFromAmm,
+    getNotifier: () => notifier,
   });
 
   return harden({ publicFacet, creatorFacet });
