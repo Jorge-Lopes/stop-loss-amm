@@ -169,11 +169,17 @@ test('Test remove Liquidity from AMM', async (t) => {
     E(publicFacet).getBalanceByBrand('Amm', liquidityIssuer),
   ])
 
+  const centralBrand = centralR.brand;
+  const secondaryBrand = secondaryR.brand;
+  const liquidityBrand = await E(liquidityIssuer).getBrand();
+  const centralAmount = (value) => AmountMath.make(centralBrand, value);
+  const secondaryAmount = (value) => AmountMath.make(secondaryBrand, value);
+  const liquidityAmountTest = (value) => AmountMath.make(liquidityBrand, value);
+
   // verify that balance holded in stopLoss seat was correctly updated
-  // TODO: verify with the amounts instead of values
-  t.deepEqual(centralBalance.value, 30_000n);
-  t.deepEqual(secondaryBalance.value, 60_000n);
-  t.deepEqual(lpTokenBalance.value, 0n);
+  t.deepEqual(centralBalance, centralAmount(30_000n));
+  t.deepEqual(secondaryBalance, secondaryAmount(60_000n));
+  t.deepEqual(lpTokenBalance, liquidityAmountTest(0n));
 
 });
 
