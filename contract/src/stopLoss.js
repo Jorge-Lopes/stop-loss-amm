@@ -15,8 +15,6 @@ const start = async (zcf) => {
   assertIssuerKeywords(zcf, ['Central', 'Secondary', 'Liquidity']);
   const { zcfSeat: stopLossSeat } = zcf.makeEmptySeatKit();
 
-  const { updater, notifier } = makeNotifierKit();
-
   const centralBrand = zcf.getBrandForIssuer(centralIssuer);
   const secondaryBrand = zcf.getBrandForIssuer(secondaryIssuer);
   const lpTokenBrand = zcf.getBrandForIssuer(liquidityIssuer);
@@ -25,13 +23,17 @@ const start = async (zcf) => {
   const centralAmount = (value) => AmountMath.make(centralBrand, value);
   const secondaryAmount = (value) => AmountMath.make(secondaryBrand, value);
 
-  const state = {
-    phase: 'ACTIVE',
-    lpBalance: stopLossSeat.getAmountAllocated('Liquidity', lpTokenBrand),
-    liquidityBalance: {
-         central: stopLossSeat.getAmountAllocated('Central', centralBrand),
-         secondary: stopLossSeat.getAmountAllocated('Secondary', secondaryBrand),
-    }
+  const { updater, notifier } = makeNotifierKit();
+  const updateAllocationState = () => {
+    const allocationState = harden({
+      phase: 'ACTIVE',
+      lpBalance: stopLossSeat.getAmountAllocated('Liquidity', lpTokenBrand),
+      liquidityBalance: {
+           central: stopLossSeat.getAmountAllocated('Central', centralBrand),
+           secondary: stopLossSeat.getAmountAllocated('Secondary', secondaryBrand),
+      }
+    });
+    updater.updateState(allocationState);
   }
 
   const makeLockLPTokensInvitation = () => {
@@ -52,7 +54,7 @@ const start = async (zcf) => {
 
       creatorSeat.exit();
 
-      updater.updateState(state);
+      updateAllocationState();
 
       return `Liquidity locked in the value of ${liquidityAmount.value}`;
     };
@@ -92,7 +94,7 @@ const start = async (zcf) => {
 
     await Promise.all([deposited, E(liquiditySeat).getOfferResult()]);
 
-    updater.finish(state);
+    updateAllocationState();
 
     return E(liquiditySeat).getOfferResult();
   };
