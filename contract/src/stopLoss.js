@@ -7,7 +7,7 @@ import {
 import { Far, E } from '@endo/far';
 import { AmountMath } from '@agoric/ertp';
 import { offerTo } from '@agoric/zoe/src/contractSupport/index.js';
-import { makeAsyncIterableFromNotifier, makeNotifierKit } from '@agoric/notifier';
+import { makeNotifierKit } from '@agoric/notifier';
 
 const start = async (zcf) => {
   const { ammPublicFacet, centralIssuer, secondaryIssuer, liquidityIssuer } =
@@ -22,21 +22,24 @@ const start = async (zcf) => {
   const { updater, notifier } = makeNotifierKit();
 
   /**
+   * TODO: this object should be imported from constants.js
    * Constants for allocation phase,
    *
    * ACTIVE       - lp tokens locked in stopLoss seat 
    * LIQUIDATING  - liquidity being withdraw from the amm pool to the stopLoss seat
    * LIQUIDATED   - liquidity has been withdraw from the amm pool to the stopLoss seat
    * CLOSED       - stopLoss was closed by the creator and all assets have been transfered to his seat
+   * ERROR        - error catched in some process
    */
   const AllocationPhase = ({
     ACTIVE: 'active',
     LIQUIDATING: 'liquidating',
     LIQUIDATED: 'liquidated',
     CLOSED: 'closed',
+    ERROR: 'error,'
   });
 
-
+  
   const updateAllocationState = (allocationPhase) => {
     const allocationState = harden({
       phase: allocationPhase,

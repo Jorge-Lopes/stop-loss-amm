@@ -243,13 +243,12 @@ test('Test notifier', async (t) => {
     paymentKeywordRecord,
   );
 
-  // test notifier
-  // confirm the balances also with the stopLoss Seat balance
-
   await E(creatorFacet).removeLiquidityFromAmm();
 
   const allocationStateNotifier = await E(creatorFacet).getNotifier();
   const {value: allocationState} = await E(allocationStateNotifier).getUpdateSince();
+
+  t.deepEqual(allocationState.phase, 'liquidated');
 
   const centralBalance = allocationState.liquidityBalance.central;
   const secondaryBalance = allocationState.liquidityBalance.secondary;
