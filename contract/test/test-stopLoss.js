@@ -9,6 +9,7 @@ import {
   startStopLoss,
 } from './helper.js';
 import { E } from '@endo/far';
+import { AmountMath } from '@agoric/ertp';
 
 test.before(async (t) => {
   const bundleCache = await unsafeMakeBundleCache('./bundles/');
@@ -244,17 +245,22 @@ test('Test notifier', async (t) => {
 
   await E(creatorFacet).removeLiquidityFromAmm();
 
-  const [centralBalance, secondaryBalance, lpTokenBalance] = await Promise.all([
-    E(publicFacet).getBalanceByBrand('Central', centralIssuer),
-    E(publicFacet).getBalanceByBrand('Secondary', secondaryIssuer),
-    E(publicFacet).getBalanceByBrand('Amm', liquidityIssuer),
-  ])
+  const allocationStateNotifier = await E(creatorFacet).getNotifier();
+  const {value: allocationState} = await E(allocationStateNotifier).getUpdateSince();
+
+  const centralBalance = allocationState.liquidityBalance.central;
+  const secondaryBalance = allocationState.liquidityBalance.secondary;
+  const lpTokenBalance = allocationState.lpBalance;
+
+  const centralBrand = centralR.brand;
+  const secondaryBrand = secondaryR.brand;
+  const liquidityBrand = await E(liquidityIssuer).getBrand();
+  const centralAmount = (value) => AmountMath.make(centralBrand, value);
+  const secondaryAmount = (value) => AmountMath.make(secondaryBrand, value);
+  const liquidityAmountTest = (value) => AmountMath.make(liquidityBrand, value);
 
   // verify that balance holded in stopLoss seat was correctly updated
-  t.deepEqual(centralBalance.value, 30_000n);
-  t.deepEqual(secondaryBalance.value, 60_000n);
-  t.deepEqual(lpTokenBalance.value, 0n);
-
-  
-
+  t.deepEqual(centralBalance, centralAmount(30_000n));
+  t.deepEqual(secondaryBalance, secondaryAmount(60_000n));
+  t.deepEqual(lpTokenBalance, liquidityAmountTest(0n));
 });
