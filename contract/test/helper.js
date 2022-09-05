@@ -280,5 +280,40 @@ export const moveFromCentralPriceUp = async (zoe,
     // console.log('INTER_INPUT_PRICE', inputPriceAmountOut);
   }
 
-  return { inputPriceAmountOut, swapInterval };
-}
+  return harden({ inputPriceAmountOut, swapInterval });
+};
+
+/**
+ *
+ * @param {ZoeService} zoe
+ * @param {XYKAMMPublicFacet} ammPublicFacet
+ * @param {IssuerKit} secondaryR
+ * @param {IssuerKit} centralR
+ * @param {Issuer} liquidityIssuer
+ * @param {Ratio} lowerBoundry
+ * @param {BigInt} swapInterval
+ * @returns {Promise<void>}
+ */
+export const moveFromCentralPriceDown = async (zoe,
+                                         ammPublicFacet,
+                                         secondaryR,
+                                         centralR,
+                                         liquidityIssuer,
+                                         lowerBoundry,
+                                         swapInterval = 1n) => {
+
+  const { swapCentralForSecondary, makeCentral, makeSecondary } = await makeLiquidityInvitations(zoe, ammPublicFacet, secondaryR, centralR, liquidityIssuer);
+
+  const { amountOut } = await E(ammPublicFacet).getInputPrice(makeCentral(1n), makeSecondary(0n));
+  let inputPriceAmountOut = amountOut
+
+  while (AmountMath.isGTE(inputPriceAmountOut, lowerBoundry.numerator)) {
+    await swapCentralForSecondary(swapInterval);
+
+    const { amountOut } = await E(ammPublicFacet).getInputPrice(makeCentral(1n), makeSecondary(0n));
+    inputPriceAmountOut = amountOut;
+    // console.log('INTER_INPUT_PRICE', inputPriceAmountOut);
+  }
+
+  return harden({ inputPriceAmountOut, swapInterval });
+};

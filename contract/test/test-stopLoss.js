@@ -2,18 +2,22 @@
 
 import { test } from '@agoric/zoe/tools/prepare-test-env-ava.js';
 import { unsafeMakeBundleCache } from '@agoric/run-protocol/test/bundleTool.js';
+import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
 import {
   addLiquidityToPool,
   startAmmPool,
   startServices,
   startStopLoss,
   swapSecondaryForCentral,
-  swapCentralForSecondary, getBoundries, moveFromCentralPriceUp,
+  swapCentralForSecondary, getBoundries, moveFromCentralPriceUp, moveFromCentralPriceDown,
 } from './helper.js';
 import { E } from '@endo/far';
 import { makeRatioFromAmounts } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { waitForPromisesToSettle } from '@agoric/run-protocol/test/supports.js';
 import { AmountMath } from '@agoric/ertp';
+import { ALLOCATION_PHASE } from '../src/constants.js';
+
+const trace = makeTracer('Test-StopLoss');
 
 test.before(async (t) => {
   const bundleCache = await unsafeMakeBundleCache('./bundles/');
@@ -38,8 +42,8 @@ test.before(async (t) => {
 
 test('Test lock LP Tokens to contract', async (t) => {
   const { zoe, amm, centralR, secondaryR } = await startServices(t);
-  const centralInitialValue = 10_000n;
-  const secondaryInitialValue = 20_000n;
+  const centralInitialValue = 10n;
+  const secondaryInitialValue = 20n;
 
   const { makeAmountBuilderInUnit } = t.context;
 
@@ -49,7 +53,7 @@ test('Test lock LP Tokens to contract', async (t) => {
   /** @type XYKAMMPublicFacet */
   const ammPublicFacet = amm.ammPublicFacet;
 
-  const { liquidityIssuer } = await startAmmPool(
+  const { /** @type Issuer */ liquidityIssuer } = await startAmmPool(
     zoe,
     ammPublicFacet,
     centralR,
@@ -82,6 +86,7 @@ test('Test lock LP Tokens to contract', async (t) => {
   const secondaryIssuer = secondaryR.issuer;
 
   const boundries = await getBoundries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
+  trace('Boundries', boundries);
 
   const terms = {
     ammPublicFacet,
@@ -114,14 +119,15 @@ test('Test lock LP Tokens to contract', async (t) => {
     E(publicFacet).getBalanceByBrand('Liquidity', liquidityIssuer),
   ]);
 
-  t.deepEqual(addLiquidityMessage, 'Liquidity locked in the value of 30000');
+  t.deepEqual(addLiquidityMessage, `Liquidity locked in the value of ${liquidityAmount.value}`);
   t.deepEqual(liquidityBalance, liquidityAmount); // Make sure the balance in the contract is as expected
 });
 
+// TODO Integrate state checks like the tests 'trigger-lp-removal-price-moves-above-upper' and 'trigger-lp-removal-price-moves-below-lower'
 test('Test remove Liquidity from AMM', async (t) => {
   const { zoe, amm, centralR, secondaryR } = await startServices(t);
-  const centralInitialValue = 10_000n;
-  const secondaryInitialValue = 20_000n;
+  const centralInitialValue = 10n;
+  const secondaryInitialValue = 20n;
 
   /** @type XYKAMMPublicFacet */
   const ammPublicFacet = amm.ammPublicFacet;
@@ -164,6 +170,7 @@ test('Test remove Liquidity from AMM', async (t) => {
   const secondaryIssuer = secondaryR.issuer;
 
   const boundries = await getBoundries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
+  trace('Boundries', boundries);
 
   const terms = {
     ammPublicFacet,
@@ -200,128 +207,30 @@ test('Test remove Liquidity from AMM', async (t) => {
     E(publicFacet).getBalanceByBrand('Liquidity', liquidityIssuer),
   ]);
 
-  t.deepEqual(addLiquidityMessage, 'Liquidity locked in the value of 30000');
+  t.deepEqual(addLiquidityMessage, `Liquidity locked in the value of ${liquidityAmount.value}`);
   t.deepEqual(addLiquidityTokenBalance, liquidityAmount); // Make sure the balance in the contract is as expected
 
   // remove Assets from AMM
   const removeLiquidityMessage = await E(creatorFacet).removeLiquidityFromAmm();
   t.deepEqual(removeLiquidityMessage, 'Liquidity successfully removed.')
 
-  const [centralBalance, secondaryBalance, lpTokenBalance] = await Promise.all([
+  const [centralBalance, secondaryBalance, lpTokenBalance, liquidityBrand] = await Promise.all([
     E(publicFacet).getBalanceByBrand('Central', centralIssuer),
     E(publicFacet).getBalanceByBrand('Secondary', secondaryIssuer),
     E(publicFacet).getBalanceByBrand('Amm', liquidityIssuer),
+    E(liquidityIssuer).getBrand(),
   ])
 
-  const centralBrand = centralR.brand;
-  const secondaryBrand = secondaryR.brand;
-  const liquidityBrand = await E(liquidityIssuer).getBrand();
-  const centralAmount = (value) => AmountMath.make(centralBrand, value);
-  const secondaryAmount = (value) => AmountMath.make(secondaryBrand, value);
-  const liquidityAmountTest = (value) => AmountMath.make(liquidityBrand, value);
-
   // verify that balance holded in stopLoss seat was correctly updated
-  t.deepEqual(centralBalance, centralAmount(30_000n));
-  t.deepEqual(secondaryBalance, secondaryAmount(60_000n));
-  t.deepEqual(lpTokenBalance, liquidityAmountTest(0n));
-
+  t.deepEqual(centralBalance, centralInUnit(30n));
+  t.deepEqual(secondaryBalance, secondaryInUnit(60n));
+  t.deepEqual(lpTokenBalance, AmountMath.makeEmpty(liquidityBrand));
 });
 
-test('Test notifier', async (t) => {
+test('trigger-lp-removal-price-moves-above-upper', async (t) => {
   const { zoe, amm, centralR, secondaryR } = await startServices(t);
-  const centralInitialValue = 10_000n;
-  const secondaryInitialValue = 20_000n;
-
-  const ammPublicFacet = amm.ammPublicFacet;
-
-  const { liquidityIssuer } = await startAmmPool(
-    zoe,
-    ammPublicFacet,
-    centralR,
-    secondaryR,
-    centralInitialValue,
-    secondaryInitialValue,
-  );
-
-  // Add liquidity offer (secondary:central) 40_000:30_000.
-  const centralValue = 30_000n;
-  const secondaryValue = 70_000n;
-
-  const payout = await addLiquidityToPool(
-    zoe,
-    ammPublicFacet,
-    centralR,
-    secondaryR,
-    liquidityIssuer,
-    centralValue,
-    secondaryValue,
-  );
-
-  const { Liquidity } = payout;
-  const liquidityAmount = await E(liquidityIssuer).getAmountOf(Liquidity);
-
-  const centralIssuer = centralR.issuer;
-  const secondaryIssuer = secondaryR.issuer;
-
-  const terms = {
-    ammPublicFacet,
-    centralIssuer,
-    secondaryIssuer,
-    liquidityIssuer,
-  };
-
-  const issuerKeywordRecord = harden({
-    Central: centralIssuer,
-    Secondary: secondaryIssuer,
-    Liquidity: liquidityIssuer,
-  });
-
-  const { creatorFacet } = await startStopLoss(
-    zoe,
-    issuerKeywordRecord,
-    terms,
-  );
-
-  const addLiquidityInvitation =
-    E(creatorFacet).makeLockLPTokensInvitation();
-  const proposal = harden({ give: { Liquidity: liquidityAmount } });
-  const paymentKeywordRecord = harden({ Liquidity: Liquidity });
-
-  await E(zoe).offer(
-    addLiquidityInvitation,
-    proposal,
-    paymentKeywordRecord,
-  );
-
-  await E(creatorFacet).removeLiquidityFromAmm();
-
-  const allocationStateNotifier = await E(creatorFacet).getNotifier();
-  const {value: allocationState} = await E(allocationStateNotifier).getUpdateSince();
-
-  t.deepEqual(allocationState.phase, 'liquidated');
-
-  const centralBalance = allocationState.liquidityBalance.central;
-  const secondaryBalance = allocationState.liquidityBalance.secondary;
-  const lpTokenBalance = allocationState.lpBalance;
-
-  const centralBrand = centralR.brand;
-  const secondaryBrand = secondaryR.brand;
-  const liquidityBrand = await E(liquidityIssuer).getBrand();
-  const centralAmount = (value) => AmountMath.make(centralBrand, value);
-  const secondaryAmount = (value) => AmountMath.make(secondaryBrand, value);
-  const liquidityAmountTest = (value) => AmountMath.make(liquidityBrand, value);
-
-  // verify that balance holded in stopLoss seat was correctly updated
-  t.deepEqual(centralBalance, centralAmount(30_000n));
-  t.deepEqual(secondaryBalance, secondaryAmount(60_000n));
-  t.deepEqual(lpTokenBalance, liquidityAmountTest(0n));
-});
-
-
-test('Test get Quote Given from Central', async (t) => {
-  const { zoe, amm, centralR, secondaryR } = await startServices(t);
-  const centralInitialValue = 10_000n;
-  const secondaryInitialValue = 20_000n;
+  const centralInitialValue = 10n;
+  const secondaryInitialValue = 20n;
 
   /** @type XYKAMMPublicFacet */
   const ammPublicFacet = amm.ammPublicFacet;
@@ -331,8 +240,7 @@ test('Test get Quote Given from Central', async (t) => {
   const { makeAmount: centralInUnit } = makeAmountBuilderInUnit(centralR.brand, centralR.displayInfo);
   const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
 
-
-  const { liquidityIssuer } = await startAmmPool(
+  const { /** @type Issuer */ liquidityIssuer } = await startAmmPool(
     zoe,
     ammPublicFacet,
     centralR,
@@ -343,7 +251,7 @@ test('Test get Quote Given from Central', async (t) => {
 
   // Add liquidity offer (secondary:central) 40_000:30_000.
   const centralValue = 30n;
-  const secondaryValue = 70n;
+  const secondaryValue = 60n;
 
   const payout = await addLiquidityToPool(
     zoe,
@@ -365,6 +273,7 @@ test('Test get Quote Given from Central', async (t) => {
   const secondaryIssuer = secondaryR.issuer;
 
   const boundries = await getBoundries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
+  trace('Boundries', boundries);
 
   const terms = {
     ammPublicFacet,
@@ -386,6 +295,11 @@ test('Test get Quote Given from Central', async (t) => {
     terms,
   );
 
+  const notifierP = E(creatorFacet).getNotifier();
+  const { value: initialNotification } = await E(notifierP).getUpdateSince();
+
+  t.deepEqual(initialNotification.phase, ALLOCATION_PHASE.SCHEDULED);
+
   const addLiquidityInvitation =
     E(creatorFacet).makeLockLPTokensInvitation();
   const proposal = harden({ give: { Liquidity: liquidityAmount } });
@@ -396,240 +310,63 @@ test('Test get Quote Given from Central', async (t) => {
     proposal,
     paymentKeywordRecord,
   );
-  const [addLiquidityMessage, addLiquidityTokenBalance] = await Promise.all([
+  const [addLiquidityMessage, addLiquidityTokenBalance, { value: notificationAfterLPLock }] = await Promise.all([
     E(addLiquiditSeat).getOfferResult(),
     E(publicFacet).getBalanceByBrand('Liquidity', liquidityIssuer),
+    E(notifierP).getUpdateSince(),
   ]);
 
-  t.deepEqual(addLiquidityMessage, 'Liquidity locked in the value of 30000');
+  t.deepEqual(addLiquidityMessage, `Liquidity locked in the value of ${liquidityAmount.value}`);
   t.deepEqual(addLiquidityTokenBalance, liquidityAmount); // Make sure the balance in the contract is as expected
+  t.deepEqual(notificationAfterLPLock.phase, ALLOCATION_PHASE.ACTIVE);
 
-  const quote = await E(publicFacet).getQuotefromCentral(10_000n);
-  t.deepEqual(quote.value, 15_953n)
+  console.log('Moving the price up...')
+  const { inputPriceAmountOut: inputPriceAfter, swapInterval }  =
+    await moveFromCentralPriceUp(zoe, ammPublicFacet, secondaryR, centralR, liquidityIssuer, boundries.upper, 2n);
+  console.log('Done.')
 
-});
+  trace('Input price after', inputPriceAfter);
 
-test('Test get Quote When GTE from Central', async (t) => {
-  const { zoe, amm, centralR, secondaryR } = await startServices(t);
-  const centralInitialValue = 10_000n;
-  const secondaryInitialValue = 20_000n;
+  const { value: notificationAfterPricePushedToLimit } = await E(notifierP).getUpdateSince();
+  t.deepEqual(notificationAfterPricePushedToLimit.phase, ALLOCATION_PHASE.ACTIVE);
 
-  /** @type XYKAMMPublicFacet */
-  const ammPublicFacet = amm.ammPublicFacet;
+  await swapSecondaryForCentral(zoe, ammPublicFacet, secondaryR, centralR, liquidityIssuer, swapInterval);
+  await waitForPromisesToSettle();
 
-  const { makeAmountBuilderInUnit } = t.context;
-
-  const { makeAmount: centralInUnit } = makeAmountBuilderInUnit(centralR.brand, centralR.displayInfo);
-  const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
-
-
-  const { liquidityIssuer } = await startAmmPool(
-    zoe,
-    ammPublicFacet,
-    centralR,
-    secondaryR,
-    centralInitialValue,
-    secondaryInitialValue,
-  );
-
-  // Add liquidity offer (secondary:central) 40_000:30_000.
-  const centralValue = 30n;
-  const secondaryValue = 70n;
-
-  const payout = await addLiquidityToPool(
-    zoe,
-    ammPublicFacet,
-    centralR,
-    secondaryR,
-    liquidityIssuer,
-    centralValue,
-    secondaryValue,
-  );
-
-  const { Liquidity } = payout;
-  const [liquidityAmount, { fromCentral: fromCentralPA }] = await Promise.all([
-    E(liquidityIssuer).getAmountOf(Liquidity),
-    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand)
+  const [liquidityAmountAllocated, liquidityBrand, centralAmountAllocated, secondaryAmountAllocated, { value: notificationAfterPriceAboveUpper }] = await Promise.all([
+    E(publicFacet).getBalanceByBrand('Liquidity', liquidityIssuer),
+    E(liquidityIssuer).getBrand(),
+    E(publicFacet).getBalanceByBrand('Central', centralR.issuer),
+    E(publicFacet).getBalanceByBrand('Secondary', secondaryR.issuer),
+    E(notifierP).getUpdateSince(),
   ]);
 
-  const centralIssuer = centralR.issuer;
-  const secondaryIssuer = secondaryR.issuer;
-
-  const boundries = await getBoundries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
-
-  const terms = {
-    ammPublicFacet,
-    centralIssuer,
-    secondaryIssuer,
-    liquidityIssuer,
-    boundries
-  };
-
-  const issuerKeywordRecord = harden({
-    Central: centralIssuer,
-    Secondary: secondaryIssuer,
-    Liquidity: liquidityIssuer,
+  trace('Balances from contract', {
+    Liquidity: liquidityAmountAllocated,
+    Central: centralAmountAllocated,
+    Secondary: secondaryAmountAllocated
   });
 
-  const { creatorFacet, publicFacet } = await startStopLoss(
-    zoe,
-    issuerKeywordRecord,
-    terms,
-  );
+  // Check balances
+  t.deepEqual(liquidityAmountAllocated, AmountMath.makeEmpty(liquidityBrand));
+  t.truthy(AmountMath.isGTE(centralInUnit(30n), centralAmountAllocated));
+  t.truthy(AmountMath.isGTE(secondaryAmountAllocated, secondaryInUnit(60n)));
 
-  const addLiquidityInvitation =
-    E(creatorFacet).makeLockLPTokensInvitation();
-  const proposal = harden({ give: { Liquidity: liquidityAmount } });
-  const paymentKeywordRecord = harden({ Liquidity: Liquidity });
-
-  const addLiquiditSeat = await E(zoe).offer(
-    addLiquidityInvitation,
-    proposal,
-    paymentKeywordRecord,
-  );
-  const [addLiquidityMessage, addLiquidityTokenBalance] = await Promise.all([
-    E(addLiquiditSeat).getOfferResult(),
-    E(publicFacet).getBalanceByBrand('Liquidity', liquidityIssuer),
-  ]);
-
-  t.deepEqual(addLiquidityMessage, 'Liquidity locked in the value of 30000');
-  t.deepEqual(addLiquidityTokenBalance, liquidityAmount); // Make sure the balance in the contract is as expected
-
-  const quote = await E(publicFacet).getQuotefromCentral(10_000n);
-  t.truthy(quote.value <= 16_000n); // verify that quote is under the valueOut defined next
-
-  // make a swap to change the quote and triger the quoteWhen promise
-  const secondaryValueIn = 2_000n;
-  const swapSeat = swapSecondaryForCentral(
-    zoe,
-    ammPublicFacet,
-    secondaryR,
-    centralR,
-    liquidityIssuer,
-    secondaryValueIn,
-  );
-  t.is(await E(swapSeat).getOfferResult(), 'Swap successfully completed.');
-
-  const quoteWhenGTE = await E(publicFacet).getQuoteWhenGreaterFromCentral(10_000n, 16_000n);
-  t.truthy(quoteWhenGTE); // verify that the promise was resolved and a quote was returned
-
-  const updatedQuote = await E(publicFacet).getQuotefromCentral(10_000n);
-  t.truthy(updatedQuote.value >= 16_000n)// verify that quote is above the valueOut defined above
-
+  // Check notification
+  t.deepEqual(notificationAfterPriceAboveUpper.phase, ALLOCATION_PHASE.LIQUIDATED);
+  t.deepEqual(liquidityAmountAllocated, notificationAfterPriceAboveUpper.lpBalance);
+  t.deepEqual(centralAmountAllocated, notificationAfterPriceAboveUpper.liquidityBalance.central);
+  t.deepEqual(secondaryAmountAllocated, notificationAfterPriceAboveUpper.liquidityBalance.secondary);
 });
 
-test('Test get Quote When LTE from Central', async (t) => {
-  const { zoe, amm, centralR, secondaryR } = await startServices(t);
-  const centralInitialValue = 10_000n;
-  const secondaryInitialValue = 20_000n;
-
-  /** @type XYKAMMPublicFacet */
-  const ammPublicFacet = amm.ammPublicFacet;
-
-  const { makeAmountBuilderInUnit } = t.context;
-
-  const { makeAmount: centralInUnit } = makeAmountBuilderInUnit(centralR.brand, centralR.displayInfo);
-  const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
-
-  const { liquidityIssuer } = await startAmmPool(
-    zoe,
-    ammPublicFacet,
-    centralR,
-    secondaryR,
-    centralInitialValue,
-    secondaryInitialValue,
-  );
-
-  // Add liquidity offer (secondary:central) 40_000:30_000.
-  const centralValue = 30n;
-  const secondaryValue = 70n;
-
-  const payout = await addLiquidityToPool(
-    zoe,
-    ammPublicFacet,
-    centralR,
-    secondaryR,
-    liquidityIssuer,
-    centralValue,
-    secondaryValue,
-  );
-
-  const { Liquidity } = payout;
-  const [liquidityAmount, { fromCentral: fromCentralPA }] = await Promise.all([
-    E(liquidityIssuer).getAmountOf(Liquidity),
-    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand)
-  ]);
-
-  const centralIssuer = centralR.issuer;
-  const secondaryIssuer = secondaryR.issuer;
-
-  const boundries = await getBoundries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
-
-  const terms = {
-    ammPublicFacet,
-    centralIssuer,
-    secondaryIssuer,
-    liquidityIssuer,
-    boundries
-  };
-
-  const issuerKeywordRecord = harden({
-    Central: centralIssuer,
-    Secondary: secondaryIssuer,
-    Liquidity: liquidityIssuer,
-  });
-
-  const { creatorFacet, publicFacet } = await startStopLoss(
-    zoe,
-    issuerKeywordRecord,
-    terms,
-  );
-
-  const addLiquidityInvitation =
-    E(creatorFacet).makeLockLPTokensInvitation();
-  const proposal = harden({ give: { Liquidity: liquidityAmount } });
-  const paymentKeywordRecord = harden({ Liquidity: Liquidity });
-
-  const addLiquiditSeat = await E(zoe).offer(
-    addLiquidityInvitation,
-    proposal,
-    paymentKeywordRecord,
-  );
-  const [addLiquidityMessage, addLiquidityTokenBalance] = await Promise.all([
-    E(addLiquiditSeat).getOfferResult(),
-    E(publicFacet).getBalanceByBrand('Liquidity', liquidityIssuer),
-  ]);
-
-  t.deepEqual(addLiquidityMessage, 'Liquidity locked in the value of 30000');
-  t.deepEqual(addLiquidityTokenBalance, liquidityAmount); // Make sure the balance in the contract is as expected
-
-  const quote = await E(publicFacet).getQuotefromCentral(10_000n);
-  t.truthy(quote.value>= 15_000n); // verify that quote is above the valueOut defined next
-
-  // make a swap to change the quote and triger the quoteWhen promise
-  const centralValueIn = 2_000n;
-  const swapSeat = swapCentralForSecondary(
-    zoe,
-    ammPublicFacet,
-    secondaryR,
-    centralR,
-    liquidityIssuer,
-    centralValueIn,
-  );
-  t.is(await E(swapSeat).getOfferResult(), 'Swap successfully completed.');
-
-  const quoteWhenLTE = await E(publicFacet).getQuoteWhenLowerFromCentral(10_000n, 15_000n);
-  t.truthy(quoteWhenLTE); // verify that the promise was resolved and a quote was returned
-
-  const updatedQuote = await E(publicFacet).getQuotefromCentral(10_000n);
-  t.truthy(updatedQuote.value <= 15_000n)// verify that quote is under the valueOut defined above
-
-});
-
-test('trigger-lp-removal', async (t) => {
-  const { zoe, amm, centralR, secondaryR } = await startServices(t);
-  const centralInitialValue = 10_000n;
-  const secondaryInitialValue = 20_000n;
+test('trigger-lp-removal-price-moves-below-lower', async (t) => {
+  const { /** @type ZoeService */ zoe,
+    /** @type XYKAMMPublicFacet */ amm,
+    /** @type IssuerKit */ centralR,
+    /** @type IssuerKit */ secondaryR,
+  } = await startServices(t);
+  const centralInitialValue = 10n;
+  const secondaryInitialValue = 20n;
 
   /** @type XYKAMMPublicFacet */
   const ammPublicFacet = amm.ammPublicFacet;
@@ -694,6 +431,11 @@ test('trigger-lp-removal', async (t) => {
     terms,
   );
 
+  const notfierP = E(creatorFacet).getNotifier();
+  const { value: initialNotification } = await E(notfierP).getUpdateSince();
+
+  t.deepEqual(initialNotification.phase, ALLOCATION_PHASE.SCHEDULED);
+
   const addLiquidityInvitation =
     E(creatorFacet).makeLockLPTokensInvitation();
   const proposal = harden({ give: { Liquidity: liquidityAmount } });
@@ -704,30 +446,51 @@ test('trigger-lp-removal', async (t) => {
     proposal,
     paymentKeywordRecord,
   );
-  const [addLiquidityMessage, addLiquidityTokenBalance] = await Promise.all([
+  const [addLiquidityMessage, addLiquidityTokenBalance, { value: notificationAfterLPLock }] = await Promise.all([
     E(addLiquiditSeat).getOfferResult(),
     E(publicFacet).getBalanceByBrand('Liquidity', liquidityIssuer),
+    E(notfierP).getUpdateSince(),
   ]);
 
   t.deepEqual(addLiquidityMessage, `Liquidity locked in the value of ${liquidityAmount.value}`);
   t.deepEqual(addLiquidityTokenBalance, liquidityAmount); // Make sure the balance in the contract is as expected
+  t.deepEqual(notificationAfterLPLock.phase, ALLOCATION_PHASE.ACTIVE);
 
-  console.log('Moving the price up...')
-  const { inputPriceAmountOut: inputPriceAfter, swapInterval } = await moveFromCentralPriceUp(zoe, ammPublicFacet, secondaryR, centralR, liquidityIssuer, boundries.upper, 10n);
-  console.log('Done')
-  console.log("INPUT_PRICE_AFTER", inputPriceAfter);
+  console.log('Moving the price up...');
+  const { inputPriceAmountOut: inputPriceAfter, swapInterval } =
+    await moveFromCentralPriceDown(zoe, ammPublicFacet, secondaryR, centralR, liquidityIssuer, boundries.lower, 1n);
+  console.log('Done.');
+  trace('InputPriceAfter', inputPriceAfter);
 
+  const { value: notificationAfterPricePushedToLimit } = await E(notfierP).getUpdateSince();
+  t.deepEqual(notificationAfterPricePushedToLimit.phase, ALLOCATION_PHASE.ACTIVE);
+
+  // Move the price below the lower boundry
   await swapSecondaryForCentral(zoe, ammPublicFacet, secondaryR, centralR, liquidityIssuer, swapInterval);
   await waitForPromisesToSettle();
 
-  const [liquidityAmountAllocated, centralAmountAllocated, secondaryAmountAllocated] = await Promise.all([
+  const [liquidityAmountAllocated, liquidityBrand, centralAmountAllocated, secondaryAmountAllocated, { value: notificationAfterPriceExceedsLimit }] = await Promise.all([
     E(publicFacet).getBalanceByBrand('Liquidity', liquidityIssuer),
+    E(liquidityIssuer).getBrand(),
     E(publicFacet).getBalanceByBrand('Central', centralR.issuer),
     E(publicFacet).getBalanceByBrand('Secondary', secondaryR.issuer),
+    E(notfierP).getUpdateSince(),
   ]);
 
-  console.log('Liquidity', liquidityAmountAllocated);
-  console.log('Central', centralAmountAllocated);
-  console.log('Secondary', secondaryAmountAllocated);
+  trace('Balances from contract', {
+    Liquidity: liquidityAmountAllocated,
+    Central: centralAmountAllocated,
+    Secondary: secondaryAmountAllocated,
+  });
 
+  // Check Balances
+  t.deepEqual(liquidityAmountAllocated, AmountMath.makeEmpty(liquidityBrand));
+  t.truthy(AmountMath.isGTE(centralAmountAllocated, centralInUnit(30n)));
+  t.truthy(AmountMath.isGTE(secondaryInUnit(60n), secondaryAmountAllocated));
+
+  // Check notifier
+  t.deepEqual(notificationAfterPriceExceedsLimit.phase, ALLOCATION_PHASE.LIQUIDATED);
+  t.deepEqual(notificationAfterPriceExceedsLimit.lpBalance, liquidityAmountAllocated);
+  t.deepEqual(notificationAfterPriceExceedsLimit.liquidityBalance.central, centralAmountAllocated);
+  t.deepEqual(notificationAfterPriceExceedsLimit.liquidityBalance.secondary, secondaryAmountAllocated);
 });

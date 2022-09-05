@@ -4,3 +4,24 @@ export const BOUNDRY_WATCHER_STATUS = {
 };
 
 export const UPDATED_BOUNDRY_MESSAGE = 'Successfully updated boundries';
+
+/**
+ * Constants for allocation phase,
+ * IDLE         - contract started
+ * SCHEDULED    - price quotes scheduled
+ * ACTIVE       - lp tokens locked in stopLoss seat
+ * // TODO Consider changing the phrase 'Liquidate' to 'Remove'
+ * LIQUIDATING  - liquidity being withdraw from the amm pool to the stopLoss seat
+ * LIQUIDATED   - liquidity has been withdraw from the amm pool to the stopLoss seat
+ * CLOSED       - stopLoss was closed by the creator and all assets have been transfered to his seat
+ * ERROR        - error catched in some process
+ */
+export const ALLOCATION_PHASE = ({
+  IDLE: 'idle',
+  SCHEDULED: 'scheduled',
+  ACTIVE: 'active',
+  LIQUIDATING: 'liquidating',
+  LIQUIDATED: 'liquidated',
+  CLOSED: 'closed',
+  ERROR: 'error,'
+});

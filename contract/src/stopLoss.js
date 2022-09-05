@@ -11,6 +11,10 @@ import { offerTo } from '@agoric/zoe/src/contractSupport/index.js';
 import { assertBoundryShape } from './assertionHelper.js';
 import { makeBoundryWatcher } from './boundryWatcher.js';
 import { makeNotifierKit } from '@agoric/notifier';
+import { ALLOCATION_PHASE } from './constants.js';
+import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
+
+const tracer = makeTracer('StopLoss');
 
 /**
  *
@@ -32,53 +36,39 @@ const start = async (zcf) => {
   const secondaryBrand = zcf.getBrandForIssuer(secondaryIssuer);
   const lpTokenBrand = zcf.getBrandForIssuer(liquidityIssuer);
 
-  const { updater, notifier } = makeNotifierKit();
-
-  /**
-   * TODO: this object should be imported from constants.js
-   * Constants for allocation phase,
-   *
-   * ACTIVE       - lp tokens locked in stopLoss seat
-   * LIQUIDATING  - liquidity being withdraw from the amm pool to the stopLoss seat
-   * LIQUIDATED   - liquidity has been withdraw from the amm pool to the stopLoss seat
-   * CLOSED       - stopLoss was closed by the creator and all assets have been transfered to his seat
-   * ERROR        - error catched in some process
-   */
-  const AllocationPhase = ({
-    ACTIVE: 'active',
-    LIQUIDATING: 'liquidating',
-    LIQUIDATED: 'liquidated',
-    CLOSED: 'closed',
-    ERROR: 'error,'
-  });
-
-
-  const updateAllocationState = (allocationPhase) => {
-    const allocationState = harden({
-      phase: allocationPhase,
+  const getStateSnapshot = phase => {
+    return harden({
+      phase: phase,
       lpBalance: stopLossSeat.getAmountAllocated('Liquidity', lpTokenBrand),
       liquidityBalance: {
         central: stopLossSeat.getAmountAllocated('Central', centralBrand),
         secondary: stopLossSeat.getAmountAllocated('Secondary', secondaryBrand),
       }
     });
+  };
+
+  const { updater, notifier } = makeNotifierKit(getStateSnapshot(ALLOCATION_PHASE.IDLE));
+
+  const updateAllocationState = (allocationPhase) => {
+    const allocationState = getStateSnapshot(allocationPhase);
     updater.updateState(allocationState);
   }
 
   assertBoundryShape(boundries, centralBrand, secondaryBrand);
 
-  const centralAmount = (value) => AmountMath.make(centralBrand, value);
-  const secondaryAmount = (value) => AmountMath.make(secondaryBrand, value);
-
   const init = async () => {
     const { fromCentral } = await E(ammPublicFacet).getPriceAuthorities(secondaryBrand);
 
-    return makeBoundryWatcher({
+    const boundryWatcher = makeBoundryWatcher({
       fromCentralPriceAuthority: fromCentral,
       boundries,
       centralBrand,
       secondaryBrand,
-    })
+    });
+
+    updateAllocationState(ALLOCATION_PHASE.SCHEDULED);
+
+    return boundryWatcher;
   };
 
   // Initiate listening
@@ -90,13 +80,15 @@ const start = async (zcf) => {
   const schedule = async () => {
     // Wait for the price boundry being violated
     await boundryWatcherPromise;
-    // TODO Notify state changed to 'Removing'
-    console.log('REMOVING_LP_TOKENS')
+
+    updateAllocationState(ALLOCATION_PHASE.LIQUIDATING);
+    console.log('REMOVING_LP_TOKENS');
+
     await removeLiquidityFromAmm();
   };
 
   // Schedule a trigger for LP token removal
-  schedule().catch(err => console.log('SCHEDULE_ERROR', err)); // Notify user
+  schedule().catch(() => updateAllocationState(ALLOCATION_PHASE.ERROR)); // Notify user
 
   const makeLockLPTokensInvitation = () => {
     const lockLPTokens = (creatorSeat) => {
@@ -116,7 +108,7 @@ const start = async (zcf) => {
 
       creatorSeat.exit();
 
-      updateAllocationState(AllocationPhase.ACTIVE);
+      updateAllocationState(ALLOCATION_PHASE.ACTIVE);
 
       return `Liquidity locked in the value of ${liquidityAmount.value}`;
     };
@@ -154,13 +146,12 @@ const start = async (zcf) => {
       stopLossSeat,
     );
 
-    const amount = await deposited;
+    const [amounts, removeOfferResult] = await Promise.all([deposited, E(liquiditySeat).getOfferResult()]);
+    tracer('Amounts from removal', amounts);
 
-    await Promise.all([deposited, E(liquiditySeat).getOfferResult()]);
+    updateAllocationState(ALLOCATION_PHASE.LIQUIDATED);
 
-    updateAllocationState(AllocationPhase.LIQUIDATED);
-
-    return E(liquiditySeat).getOfferResult();
+    return removeOfferResult;
   };
 
   const updateConfiguration = async boundries => {
