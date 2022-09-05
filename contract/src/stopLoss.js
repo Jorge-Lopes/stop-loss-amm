@@ -10,6 +10,7 @@ import { AmountMath } from '@agoric/ertp';
 import { offerTo } from '@agoric/zoe/src/contractSupport/index.js';
 import { assertBoundryShape } from './assertionHelper.js';
 import { makeBoundryWatcher } from './boundryWatcher.js';
+import { makeNotifierKit } from '@agoric/notifier';
 
 /**
  *
@@ -29,6 +30,40 @@ const start = async (zcf) => {
 
   const centralBrand = zcf.getBrandForIssuer(centralIssuer);
   const secondaryBrand = zcf.getBrandForIssuer(secondaryIssuer);
+  const lpTokenBrand = zcf.getBrandForIssuer(liquidityIssuer);
+
+  const { updater, notifier } = makeNotifierKit();
+
+  /**
+   * TODO: this object should be imported from constants.js
+   * Constants for allocation phase,
+   *
+   * ACTIVE       - lp tokens locked in stopLoss seat
+   * LIQUIDATING  - liquidity being withdraw from the amm pool to the stopLoss seat
+   * LIQUIDATED   - liquidity has been withdraw from the amm pool to the stopLoss seat
+   * CLOSED       - stopLoss was closed by the creator and all assets have been transfered to his seat
+   * ERROR        - error catched in some process
+   */
+  const AllocationPhase = ({
+    ACTIVE: 'active',
+    LIQUIDATING: 'liquidating',
+    LIQUIDATED: 'liquidated',
+    CLOSED: 'closed',
+    ERROR: 'error,'
+  });
+
+
+  const updateAllocationState = (allocationPhase) => {
+    const allocationState = harden({
+      phase: allocationPhase,
+      lpBalance: stopLossSeat.getAmountAllocated('Liquidity', lpTokenBrand),
+      liquidityBalance: {
+        central: stopLossSeat.getAmountAllocated('Central', centralBrand),
+        secondary: stopLossSeat.getAmountAllocated('Secondary', secondaryBrand),
+      }
+    });
+    updater.updateState(allocationState);
+  }
 
   assertBoundryShape(boundries, centralBrand, secondaryBrand);
 
@@ -81,6 +116,8 @@ const start = async (zcf) => {
 
       creatorSeat.exit();
 
+      updateAllocationState(AllocationPhase.ACTIVE);
+
       return `Liquidity locked in the value of ${liquidityAmount.value}`;
     };
 
@@ -90,26 +127,19 @@ const start = async (zcf) => {
     );
   };
 
-  /* 
-  Questions:
-    how should I use "deposited"?
-    Should the liquidity(central and secondary) be reallocated from "liquiditySeat" to the "stopLossSeat"?
-    - check again considering that the amount await was added.
-    pay attention to the diference in value of input and output liquidity from the amm
-  */
   const removeLiquidityFromAmm = async () => {
     const removeLiquidityInvitation =
       E(ammPublicFacet).makeRemoveLiquidityInvitation();
 
     const liquidityIn = stopLossSeat.getAmountAllocated(
       'Liquidity',
-      zcf.getBrandForIssuer(liquidityIssuer),
+      lpTokenBrand,
     );
 
     const proposal = harden({
       want: {
-        Central: centralAmount(0n),
-        Secondary: secondaryAmount(0n),
+        Central: AmountMath.makeEmpty(centralBrand),
+        Secondary: AmountMath.makeEmpty(secondaryBrand),
       },
       give: {
         Liquidity: liquidityIn,
@@ -126,7 +156,11 @@ const start = async (zcf) => {
 
     const amount = await deposited;
 
-    return liquiditySeat;
+    await Promise.all([deposited, E(liquiditySeat).getOfferResult()]);
+
+    updateAllocationState(AllocationPhase.LIQUIDATED);
+
+    return E(liquiditySeat).getOfferResult();
   };
 
   const updateConfiguration = async boundries => {
@@ -149,6 +183,7 @@ const start = async (zcf) => {
     makeLockLPTokensInvitation,
     removeLiquidityFromAmm,
     updateConfiguration,
+    getNotifier: () => notifier,
   });
 
   return harden({ publicFacet, creatorFacet });
@@ -182,7 +217,6 @@ export { start };
   getQuote () => {}
 
   isStopRatio () => {
-    // if one bounder resolves, the other should be canceled
       removeLiquidity ()
   }
 
@@ -192,8 +226,6 @@ export { start };
   }
 
   withdrawLiquidity () => {}
-
-  withdrawLPtoken () => {}
 
   publicFacet ({
       getQuote

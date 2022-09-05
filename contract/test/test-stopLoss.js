@@ -11,9 +11,9 @@ import {
   swapCentralForSecondary, getBoundries, moveFromCentralPriceUp,
 } from './helper.js';
 import { E } from '@endo/far';
-import { AmountMath } from '@agoric/ertp/src/amountMath.js';
 import { makeRatioFromAmounts } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { waitForPromisesToSettle } from '@agoric/run-protocol/test/supports.js';
+import { AmountMath } from '@agoric/ertp';
 
 test.before(async (t) => {
   const bundleCache = await unsafeMakeBundleCache('./bundles/');
@@ -36,7 +36,7 @@ test.before(async (t) => {
   t.context = { bundleCache, makeAmountBuilderInUnit };
 });
 
-test('Test lock LP tokens in contract', async (t) => {
+test('Test lock LP Tokens to contract', async (t) => {
   const { zoe, amm, centralR, secondaryR } = await startServices(t);
   const centralInitialValue = 10_000n;
   const secondaryInitialValue = 20_000n;
@@ -204,20 +204,117 @@ test('Test remove Liquidity from AMM', async (t) => {
   t.deepEqual(addLiquidityTokenBalance, liquidityAmount); // Make sure the balance in the contract is as expected
 
   // remove Assets from AMM
-  const removeLiquiditySeat = await E(creatorFacet).removeLiquidityFromAmm();
-  const [removeLiquidityMessage, removeLiquidityTokenBalance] = await Promise.all([
-    E(removeLiquiditySeat).getOfferResult(),
-    E(publicFacet).getBalanceByBrand('Liquidity', liquidityIssuer),
-  ]);
+  const removeLiquidityMessage = await E(creatorFacet).removeLiquidityFromAmm();
+  t.deepEqual(removeLiquidityMessage, 'Liquidity successfully removed.')
 
-  t.deepEqual(removeLiquidityMessage, 'Liquidity successfully removed.');
-  t.deepEqual(removeLiquidityTokenBalance.value, 0n);
+  const [centralBalance, secondaryBalance, lpTokenBalance] = await Promise.all([
+    E(publicFacet).getBalanceByBrand('Central', centralIssuer),
+    E(publicFacet).getBalanceByBrand('Secondary', secondaryIssuer),
+    E(publicFacet).getBalanceByBrand('Amm', liquidityIssuer),
+  ])
 
-  const {Central: centralTokenBalance, Secondary: secondaryTokenBalance} = await E(removeLiquiditySeat).getCurrentAllocation();
+  const centralBrand = centralR.brand;
+  const secondaryBrand = secondaryR.brand;
+  const liquidityBrand = await E(liquidityIssuer).getBrand();
+  const centralAmount = (value) => AmountMath.make(centralBrand, value);
+  const secondaryAmount = (value) => AmountMath.make(secondaryBrand, value);
+  const liquidityAmountTest = (value) => AmountMath.make(liquidityBrand, value);
 
-  t.deepEqual(centralTokenBalance.value, 30_000n);
-  t.deepEqual(secondaryTokenBalance.value, 60_000n);
+  // verify that balance holded in stopLoss seat was correctly updated
+  t.deepEqual(centralBalance, centralAmount(30_000n));
+  t.deepEqual(secondaryBalance, secondaryAmount(60_000n));
+  t.deepEqual(lpTokenBalance, liquidityAmountTest(0n));
 
+});
+
+test('Test notifier', async (t) => {
+  const { zoe, amm, centralR, secondaryR } = await startServices(t);
+  const centralInitialValue = 10_000n;
+  const secondaryInitialValue = 20_000n;
+
+  const ammPublicFacet = amm.ammPublicFacet;
+
+  const { liquidityIssuer } = await startAmmPool(
+    zoe,
+    ammPublicFacet,
+    centralR,
+    secondaryR,
+    centralInitialValue,
+    secondaryInitialValue,
+  );
+
+  // Add liquidity offer (secondary:central) 40_000:30_000.
+  const centralValue = 30_000n;
+  const secondaryValue = 70_000n;
+
+  const payout = await addLiquidityToPool(
+    zoe,
+    ammPublicFacet,
+    centralR,
+    secondaryR,
+    liquidityIssuer,
+    centralValue,
+    secondaryValue,
+  );
+
+  const { Liquidity } = payout;
+  const liquidityAmount = await E(liquidityIssuer).getAmountOf(Liquidity);
+
+  const centralIssuer = centralR.issuer;
+  const secondaryIssuer = secondaryR.issuer;
+
+  const terms = {
+    ammPublicFacet,
+    centralIssuer,
+    secondaryIssuer,
+    liquidityIssuer,
+  };
+
+  const issuerKeywordRecord = harden({
+    Central: centralIssuer,
+    Secondary: secondaryIssuer,
+    Liquidity: liquidityIssuer,
+  });
+
+  const { creatorFacet } = await startStopLoss(
+    zoe,
+    issuerKeywordRecord,
+    terms,
+  );
+
+  const addLiquidityInvitation =
+    E(creatorFacet).makeLockLPTokensInvitation();
+  const proposal = harden({ give: { Liquidity: liquidityAmount } });
+  const paymentKeywordRecord = harden({ Liquidity: Liquidity });
+
+  await E(zoe).offer(
+    addLiquidityInvitation,
+    proposal,
+    paymentKeywordRecord,
+  );
+
+  await E(creatorFacet).removeLiquidityFromAmm();
+
+  const allocationStateNotifier = await E(creatorFacet).getNotifier();
+  const {value: allocationState} = await E(allocationStateNotifier).getUpdateSince();
+
+  t.deepEqual(allocationState.phase, 'liquidated');
+
+  const centralBalance = allocationState.liquidityBalance.central;
+  const secondaryBalance = allocationState.liquidityBalance.secondary;
+  const lpTokenBalance = allocationState.lpBalance;
+
+  const centralBrand = centralR.brand;
+  const secondaryBrand = secondaryR.brand;
+  const liquidityBrand = await E(liquidityIssuer).getBrand();
+  const centralAmount = (value) => AmountMath.make(centralBrand, value);
+  const secondaryAmount = (value) => AmountMath.make(secondaryBrand, value);
+  const liquidityAmountTest = (value) => AmountMath.make(liquidityBrand, value);
+
+  // verify that balance holded in stopLoss seat was correctly updated
+  t.deepEqual(centralBalance, centralAmount(30_000n));
+  t.deepEqual(secondaryBalance, secondaryAmount(60_000n));
+  t.deepEqual(lpTokenBalance, liquidityAmountTest(0n));
 });
 
 
@@ -400,7 +497,7 @@ test('Test get Quote When GTE from Central', async (t) => {
 
   const quote = await E(publicFacet).getQuotefromCentral(10_000n);
   t.truthy(quote.value <= 16_000n); // verify that quote is under the valueOut defined next
-  
+
   // make a swap to change the quote and triger the quoteWhen promise
   const secondaryValueIn = 2_000n;
   const swapSeat = swapSecondaryForCentral(
@@ -508,7 +605,7 @@ test('Test get Quote When LTE from Central', async (t) => {
 
   const quote = await E(publicFacet).getQuotefromCentral(10_000n);
   t.truthy(quote.value>= 15_000n); // verify that quote is above the valueOut defined next
-  
+
   // make a swap to change the quote and triger the quoteWhen promise
   const centralValueIn = 2_000n;
   const swapSeat = swapCentralForSecondary(
