@@ -11,7 +11,7 @@ import { offerTo } from '@agoric/zoe/src/contractSupport/index.js';
 import { assertBoundryShape } from './assertionHelper.js';
 import { makeBoundryWatcher } from './boundryWatcher.js';
 import { makeNotifierKit } from '@agoric/notifier';
-import { ALLOCATION_PHASE } from './constants.js';
+import { ALLOCATION_PHASE, BOUNDRY_WATCHER_STATUS } from './constants.js';
 import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
 
 const tracer = makeTracer('StopLoss');
@@ -79,7 +79,15 @@ const start = async (zcf) => {
 
   const schedule = async () => {
     // Wait for the price boundry being violated
-    await boundryWatcherPromise;
+    const { code, quote } = await boundryWatcherPromise;
+
+    if (code === BOUNDRY_WATCHER_STATUS.FAIL) {
+      updateAllocationState(ALLOCATION_PHASE.ERROR);
+      tracer('Boundry watcher error', error);
+      return;
+    }
+
+    tracer('Resolving with the quote', getAmountOut(quote));
 
     updateAllocationState(ALLOCATION_PHASE.LIQUIDATING);
     console.log('REMOVING_LP_TOKENS');
@@ -88,7 +96,10 @@ const start = async (zcf) => {
   };
 
   // Schedule a trigger for LP token removal
-  schedule().catch(() => updateAllocationState(ALLOCATION_PHASE.ERROR)); // Notify user
+  schedule().catch(error => {
+    updateAllocationState(ALLOCATION_PHASE.ERROR);
+    tracer('Schedule encountered an error', error);
+  }); // Notify user
 
   const makeLockLPTokensInvitation = () => {
     const lockLPTokens = (creatorSeat) => {

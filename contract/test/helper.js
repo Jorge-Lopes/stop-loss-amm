@@ -245,7 +245,7 @@ export const getBoundries =
         centralAmountIn,
       ),
       base: makeRatioFromAmounts(baseAmountOut, centralAmountIn),
-      marginAmount
+      marginAmount,
     };
   };
 
@@ -267,12 +267,16 @@ export const moveFromCentralPriceUp = async (zoe,
                                              liquidityIssuer,
                                              upperBoundry,
                                              swapInterval = 1n) => {
-  const { swapSecondaryForCentral, makeCentral, makeSecondary } = await makeLiquidityInvitations(zoe, ammPublicFacet, secondaryR, centralR, liquidityIssuer);
+  const {
+    swapSecondaryForCentral,
+    makeCentral,
+    makeSecondary,
+  } = await makeLiquidityInvitations(zoe, ammPublicFacet, secondaryR, centralR, liquidityIssuer);
 
   const { amountOut } = await E(ammPublicFacet).getInputPrice(makeCentral(1n), makeSecondary(0n));
-  let inputPriceAmountOut = amountOut
+  let inputPriceAmountOut = amountOut;
 
-  while (AmountMath.isGTE(upperBoundry.numerator, inputPriceAmountOut)){
+  while (AmountMath.isGTE(upperBoundry.numerator, inputPriceAmountOut)) {
     await swapSecondaryForCentral(swapInterval);
 
     const { amountOut } = await E(ammPublicFacet).getInputPrice(makeCentral(1n), makeSecondary(0n));
@@ -295,17 +299,21 @@ export const moveFromCentralPriceUp = async (zoe,
  * @returns {Promise<void>}
  */
 export const moveFromCentralPriceDown = async (zoe,
-                                         ammPublicFacet,
-                                         secondaryR,
-                                         centralR,
-                                         liquidityIssuer,
-                                         lowerBoundry,
-                                         swapInterval = 1n) => {
+                                               ammPublicFacet,
+                                               secondaryR,
+                                               centralR,
+                                               liquidityIssuer,
+                                               lowerBoundry,
+                                               swapInterval = 1n) => {
 
-  const { swapCentralForSecondary, makeCentral, makeSecondary } = await makeLiquidityInvitations(zoe, ammPublicFacet, secondaryR, centralR, liquidityIssuer);
+  const {
+    swapCentralForSecondary,
+    makeCentral,
+    makeSecondary,
+  } = await makeLiquidityInvitations(zoe, ammPublicFacet, secondaryR, centralR, liquidityIssuer);
 
   const { amountOut } = await E(ammPublicFacet).getInputPrice(makeCentral(1n), makeSecondary(0n));
-  let inputPriceAmountOut = amountOut
+  let inputPriceAmountOut = amountOut;
 
   while (AmountMath.isGTE(inputPriceAmountOut, lowerBoundry.numerator)) {
     await swapCentralForSecondary(swapInterval);
