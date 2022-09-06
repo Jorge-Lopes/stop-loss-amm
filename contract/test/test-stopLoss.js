@@ -238,19 +238,29 @@ test('Test remove Liquidity from AMM', async (t) => {
   const removeLiquidityMessage = await E(creatorFacet).removeLiquidityFromAmm();
   t.deepEqual(removeLiquidityMessage, 'Liquidity successfully removed.')
 
-  const [centralBalance, secondaryBalance, lpTokenBalance, liquidityBrand, { value: notificationAfterRemoveLiquidity }] = await Promise.all([
-    E(publicFacet).getBalanceByBrand('Central', centralIssuer),
-    E(publicFacet).getBalanceByBrand('Secondary', secondaryIssuer),
-    E(publicFacet).getBalanceByBrand('Amm', liquidityIssuer),
+  const [liquidityAmountAllocated, liquidityBrand, centralAmountAllocated, secondaryAmountAllocated, { value: notificationAfterRemoveLiquidity  }] = await Promise.all([
+    E(publicFacet).getBalanceByBrand('Liquidity', liquidityIssuer),
     E(liquidityIssuer).getBrand(),
+    E(publicFacet).getBalanceByBrand('Central', centralR.issuer),
+    E(publicFacet).getBalanceByBrand('Secondary', secondaryR.issuer),
     E(notfierP).getUpdateSince(),
-  ])
+  ]);
 
-  // verify that balance holded in stopLoss seat was correctly updated
-  t.deepEqual(centralBalance, centralInUnit(30n));
-  t.deepEqual(secondaryBalance, secondaryInUnit(60n));
-  t.deepEqual(lpTokenBalance, AmountMath.makeEmpty(liquidityBrand));
+  trace('Balances from contract', {
+    Liquidity: liquidityAmountAllocated,
+    Central: centralAmountAllocated,
+    Secondary: secondaryAmountAllocated,
+  });
+  // Check Balances
+  t.deepEqual(liquidityAmountAllocated, AmountMath.makeEmpty(liquidityBrand));
+  t.truthy(AmountMath.isGTE(centralAmountAllocated, centralInUnit(30n)));
+  t.truthy(AmountMath.isGTE(secondaryInUnit(60n), secondaryAmountAllocated));
+
+  // Check notifier
   t.deepEqual(notificationAfterRemoveLiquidity.phase, ALLOCATION_PHASE.LIQUIDATED);
+  t.deepEqual(notificationAfterRemoveLiquidity.lpBalance, liquidityAmountAllocated);
+  t.deepEqual(notificationAfterRemoveLiquidity.liquidityBalance.central, centralAmountAllocated);
+  t.deepEqual(notificationAfterRemoveLiquidity.liquidityBalance.secondary, secondaryAmountAllocated);
 });
 
 test('trigger-lp-removal-price-moves-above-upper', async (t) => {
