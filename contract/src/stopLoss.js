@@ -165,6 +165,47 @@ const start = async (zcf) => {
     return removeOfferResult;
   };
 
+  const makeWithdrawLiquidityInvitation = () => {
+    const withdrawLiquidity = (creatorSeat) => {
+      assertProposalShape(creatorSeat, {
+        want: {
+          Central: null,
+          Secondary: null,
+        },
+      });
+
+      const centralAmountAllocated = stopLossSeat.getAmountAllocated(
+        'Central',
+        centralBrand,
+      );
+      const secondaryAmountAllocated = stopLossSeat.getAmountAllocated(
+        'Secondary',
+        secondaryBrand,
+      );
+
+      // assert that ALLOCATION_PHASE is LIQUIDATED
+
+      creatorSeat.incrementBy(
+        stopLossSeat.decrementBy(
+          harden({
+            Central: centralAmountAllocated,
+            Secondary: secondaryAmountAllocated,
+          }),
+        ),
+      );
+
+      zcf.reallocate(creatorSeat, stopLossSeat);
+
+      creatorSeat.exit();
+
+      updateAllocationState(ALLOCATION_PHASE.CLOSED);
+
+      return `Liquidity withdraw to creator seat`;
+    };
+
+    return zcf.makeInvitation(withdrawLiquidity, 'withdraw Liquidity');
+  };
+
   const updateConfiguration = async boundries => {
     return await updateBoundries(boundries);
   };
@@ -183,6 +224,7 @@ const start = async (zcf) => {
 
   const creatorFacet = Far('creator facet', {
     makeLockLPTokensInvitation,
+    makeWithdrawLiquidityInvitation,
     removeLiquidityFromAmm,
     updateConfiguration,
     getNotifier: () => notifier,
@@ -192,51 +234,3 @@ const start = async (zcf) => {
 };
 harden(start);
 export { start };
-
-/*
-// next steps:
-  remove,
-    - check input and output value
-    - check liquiditySeat
-    - check allocation of the liquidity
-
-  tests
-    - comment the tests to explain their purpose
-*/
-
-/* Code structure:
-  
-  terms: ammPublicFacet, stopRatioUpperLimit, stopRatioLowerLimit,  secondaryBrand;
-  issuerKeywordRecord: Central, Secondary, Liquidity;
-
-  makeLockLPTokensInvitation () => {
-    lockLPTokens () => {}
-  }
-
-  removeLiquidity () => {}
-
-  getPriceAuthority (Secondary) => {}
-  getQuote () => {}
-
-  isStopRatio () => {
-      removeLiquidity ()
-  }
-
-  updateStopRatio () => {
-      removeLiquidity ()
-      create new contract*
-  }
-
-  withdrawLiquidity () => {}
-
-  publicFacet ({
-      getQuote
-  })
-
-  creatorFacet ({
-      makeAddLPTokensInvitation,
-      updateStopRatio
-      withdrawLiquidity
-  })
-
-*/
