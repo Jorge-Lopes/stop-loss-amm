@@ -391,6 +391,52 @@ test('update-both-boundries-then-price-goes-above-upper', async t => {
 
 });
 
+test('mutableQuote-promises-rejected', async t => {
+
+  const {
+    timer,
+    assets: {
+      centralR: { brand: centralBrand, displayInfo: { decimalPlaces: centralDecimalPlaces } },
+      secondaryR: { brand: secondaryBrand, displayInfo: { decimalPlaces: secondaryDecimalPlaces } },
+    },
+  } = t.context;
+
+  t.plan(2);
+
+  const centralAmountOneUnit = AmountMath.make(centralBrand, 10n ** BigInt(centralDecimalPlaces));
+
+  /** @type PriceAuthority */
+  const fromCentralPriceAuthority = makeManualPriceAuthority({
+    actualBrandIn: centralBrand,
+    actualBrandOut: secondaryBrand,
+    initialPrice: makeRatio(2n * 10n ** BigInt(secondaryDecimalPlaces), secondaryBrand, 10n ** BigInt(centralDecimalPlaces), centralBrand),
+    timer,
+  });
+  const boundries = await getBoundries(fromCentralPriceAuthority, centralAmountOneUnit, secondaryBrand);
+  trace(boundries);
+
+  const { boundryWatcherPromise } = makeBoundryWatcher({
+    fromCentralPriceAuthority,
+    boundries,
+    centralBrand,
+    secondaryBrand,
+  });
+
+  boundryWatcherPromise.then(({ code, error }) => {
+    t.is(code, BOUNDRY_WATCHER_STATUS.FAIL);
+    t.truthy(error instanceof Error);
+
+    trace('boundryWatcherPromise', {
+      code,
+      error,
+    });
+  });
+
+  await E(fromCentralPriceAuthority).setPrice(undefined);
+  await waitForPromisesToSettle();
+
+});
+
 /**
  * Test Case
  * Update the one of the boundries in a way that the updated boundry falls outside of the allowed price window

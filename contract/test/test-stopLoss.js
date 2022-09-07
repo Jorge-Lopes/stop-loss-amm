@@ -16,6 +16,8 @@ import { makeRatioFromAmounts } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { waitForPromisesToSettle } from '@agoric/run-protocol/test/supports.js';
 import { AmountMath } from '@agoric/ertp';
 import { ALLOCATION_PHASE, UPDATED_BOUNDRY_MESSAGE } from '../src/constants.js';
+import { makeManualPriceAuthority } from '@agoric/zoe/tools/manualPriceAuthority.js';
+import buildManualTimer from '@agoric/zoe/tools/manualTimer.js';
 
 const trace = makeTracer('Test-StopLoss');
 
@@ -1367,4 +1369,114 @@ test('update-boundaries-price-moves-below-old-lower-then-new-upper', async (t) =
   t.deepEqual(notificationAfterPriceExceedsLimit.lpBalance, liquidityAmountAllocatedAfterUpdate);
   t.deepEqual(notificationAfterPriceExceedsLimit.liquidityBalance.central, centralAmountAllocatedAfterUpdate);
   t.deepEqual(notificationAfterPriceExceedsLimit.liquidityBalance.secondary, secondaryAmountAllocatedAfterUpdate);
+});
+
+test('boundryWatcher-failed', async (t) => {
+  const { zoe, amm, centralR, secondaryR } = await startServices(t);
+  const centralInitialValue = 10n;
+  const secondaryInitialValue = 20n;
+
+  /** @type XYKAMMPublicFacet */
+  const ammPublicFacet = amm.ammPublicFacet;
+
+  const { makeAmountBuilderInUnit } = t.context;
+
+  const { makeAmount: centralInUnit } = makeAmountBuilderInUnit(centralR.brand, centralR.displayInfo);
+  const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
+
+  const { /** @type Issuer */ liquidityIssuer } = await startAmmPool(
+    zoe,
+    ammPublicFacet,
+    centralR,
+    secondaryR,
+    centralInitialValue,
+    secondaryInitialValue,
+  );
+
+  // Add liquidity offer (secondary:central) 40_000:30_000.
+  const centralValue = 30n;
+  const secondaryValue = 60n;
+
+  const payout = await addLiquidityToPool(
+    zoe,
+    ammPublicFacet,
+    centralR,
+    secondaryR,
+    liquidityIssuer,
+    centralValue,
+    secondaryValue,
+  );
+
+  const { Liquidity } = payout;
+  const [_, { fromCentral: fromCentralPA }] = await Promise.all([
+    E(liquidityIssuer).getAmountOf(Liquidity),
+    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand)
+  ]);
+
+  const centralIssuer = centralR.issuer;
+  const secondaryIssuer = secondaryR.issuer;
+
+  const boundries = await getBoundries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
+  trace('Boundries', boundries);
+
+  const devPriceAuthority = makeManualPriceAuthority({
+    actualBrandIn: centralR.brand,
+    actualBrandOut: secondaryR.brand,
+    initialPrice: boundries.base,
+    timer: buildManualTimer(console.log),
+  });
+
+  const terms = {
+    undefined,
+    centralIssuer,
+    secondaryIssuer,
+    liquidityIssuer,
+    boundries,
+    devPriceAuthority
+  };
+
+  const issuerKeywordRecord = harden({
+    Central: centralIssuer,
+    Secondary: secondaryIssuer,
+    Liquidity: liquidityIssuer,
+  });
+
+  const { creatorFacet, publicFacet } = await startStopLoss(
+    zoe,
+    issuerKeywordRecord,
+    terms,
+  );
+
+  const notifierP = E(creatorFacet).getNotifier();
+  const { value: initialNotification } = await E(notifierP).getUpdateSince();
+
+  t.deepEqual(initialNotification.phase, ALLOCATION_PHASE.SCHEDULED);
+
+  E(devPriceAuthority).setPrice(undefined);
+  await waitForPromisesToSettle();
+
+  const [liquidityAmountAllocated, liquidityBrand, centralAmountAllocated, secondaryAmountAllocated, { value: notificationAfterBadPrice }] = await Promise.all([
+    E(publicFacet).getBalanceByBrand('Liquidity', liquidityIssuer),
+    E(liquidityIssuer).getBrand(),
+    E(publicFacet).getBalanceByBrand('Central', centralR.issuer),
+    E(publicFacet).getBalanceByBrand('Secondary', secondaryR.issuer),
+    E(notifierP).getUpdateSince(),
+  ]);
+
+  trace('Balances from contract', {
+    Liquidity: liquidityAmountAllocated,
+    Central: centralAmountAllocated,
+    Secondary: secondaryAmountAllocated
+  });
+
+  // Check balances
+  t.deepEqual(liquidityAmountAllocated, AmountMath.makeEmpty(liquidityBrand));
+  t.deepEqual(centralAmountAllocated, AmountMath.makeEmpty(centralR.brand));
+  t.deepEqual(secondaryAmountAllocated, AmountMath.makeEmpty(secondaryR.brand));
+
+  // Check notification
+  t.deepEqual(notificationAfterBadPrice.phase, ALLOCATION_PHASE.ERROR);
+  t.deepEqual(liquidityAmountAllocated, notificationAfterBadPrice.lpBalance);
+  t.deepEqual(centralAmountAllocated, notificationAfterBadPrice.liquidityBalance.central);
+  t.deepEqual(secondaryAmountAllocated, notificationAfterBadPrice.liquidityBalance.secondary);
 });

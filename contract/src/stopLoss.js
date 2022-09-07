@@ -8,7 +8,7 @@ import {
 import { Far, E } from '@endo/far';
 import { AmountMath } from '@agoric/ertp';
 import { offerTo } from '@agoric/zoe/src/contractSupport/index.js';
-import { assertBoundryShape } from './assertionHelper.js';
+import { assertBoundryShape, assertExecutionMode } from './assertionHelper.js';
 import { makeBoundryWatcher } from './boundryWatcher.js';
 import { makeNotifierKit } from '@agoric/notifier';
 import { ALLOCATION_PHASE, BOUNDRY_WATCHER_STATUS } from './constants.js';
@@ -26,9 +26,11 @@ const start = async (zcf) => {
     /** @type Issuer */ centralIssuer,
     /** @type Issuer */ secondaryIssuer,
     /** @type Issuer */ liquidityIssuer,
-    boundries } =
-    zcf.getTerms();
+    boundries,
+    /** @type PriceAuthority */ devPriceAuthority = undefined,
+  } = zcf.getTerms();
   assertIssuerKeywords(zcf, ['Central', 'Secondary', 'Liquidity']);
+  assertExecutionMode(ammPublicFacet, devPriceAuthority);
 
   const { zcfSeat: stopLossSeat } = zcf.makeEmptySeatKit();
 
@@ -57,10 +59,17 @@ const start = async (zcf) => {
   assertBoundryShape(boundries, centralBrand, secondaryBrand);
 
   const init = async () => {
-    const { fromCentral } = await E(ammPublicFacet).getPriceAuthorities(secondaryBrand);
+    let fromCentralPriceAuthority;
+
+    if (ammPublicFacet) {
+      const { fromCentral } = await E(ammPublicFacet).getPriceAuthorities(secondaryBrand);
+      fromCentralPriceAuthority = fromCentral;
+    } else {
+      fromCentralPriceAuthority = devPriceAuthority;
+    }
 
     const boundryWatcher = makeBoundryWatcher({
-      fromCentralPriceAuthority: fromCentral,
+      fromCentralPriceAuthority,
       boundries,
       centralBrand,
       secondaryBrand,
@@ -79,7 +88,7 @@ const start = async (zcf) => {
 
   const schedule = async () => {
     // Wait for the price boundry being violated
-    const { code, quote } = await boundryWatcherPromise;
+    const { code, quote, error } = await boundryWatcherPromise;
 
     if (code === BOUNDRY_WATCHER_STATUS.FAIL) {
       updateAllocationState(ALLOCATION_PHASE.ERROR);
