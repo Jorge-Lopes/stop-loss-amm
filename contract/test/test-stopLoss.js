@@ -258,7 +258,7 @@ test('Test remove Liquidity from AMM', async (t) => {
   t.deepEqual(secondaryInUnit(60n), secondaryAmountAllocated);
 
   // Check notifier
-  t.deepEqual(notificationAfterRemoveLiquidity.phase, ALLOCATION_PHASE.LIQUIDATED);
+  t.deepEqual(notificationAfterRemoveLiquidity.phase, ALLOCATION_PHASE.REMOVED);
   t.deepEqual(notificationAfterRemoveLiquidity.lpBalance, liquidityAmountAllocated);
   t.deepEqual(notificationAfterRemoveLiquidity.liquidityBalance.central, centralAmountAllocated);
   t.deepEqual(notificationAfterRemoveLiquidity.liquidityBalance.secondary, secondaryAmountAllocated);
@@ -386,7 +386,7 @@ test('trigger-lp-removal-price-moves-above-upper', async (t) => {
   t.truthy(AmountMath.isGTE(secondaryAmountAllocated, secondaryInUnit(60n)));
 
   // Check notification
-  t.deepEqual(notificationAfterPriceAboveUpper.phase, ALLOCATION_PHASE.LIQUIDATED);
+  t.deepEqual(notificationAfterPriceAboveUpper.phase, ALLOCATION_PHASE.REMOVED);
   t.deepEqual(liquidityAmountAllocated, notificationAfterPriceAboveUpper.lpBalance);
   t.deepEqual(centralAmountAllocated, notificationAfterPriceAboveUpper.liquidityBalance.central);
   t.deepEqual(secondaryAmountAllocated, notificationAfterPriceAboveUpper.liquidityBalance.secondary);
@@ -516,7 +516,7 @@ test('trigger-lp-removal-price-moves-below-lower', async (t) => {
   t.truthy(AmountMath.isGTE(secondaryInUnit(60n), secondaryAmountAllocated));
 
   // Check notifier
-  t.deepEqual(notificationAfterPriceExceedsLimit.phase, ALLOCATION_PHASE.LIQUIDATED);
+  t.deepEqual(notificationAfterPriceExceedsLimit.phase, ALLOCATION_PHASE.REMOVED);
   t.deepEqual(notificationAfterPriceExceedsLimit.lpBalance, liquidityAmountAllocated);
   t.deepEqual(notificationAfterPriceExceedsLimit.liquidityBalance.central, centralAmountAllocated);
   t.deepEqual(notificationAfterPriceExceedsLimit.liquidityBalance.secondary, secondaryAmountAllocated);
@@ -996,7 +996,7 @@ test('update-boundaries-price-moves-above-old-upper-then-new-upper', async (t) =
   t.truthy(AmountMath.isGTE(secondaryAmountAllocatedAfterUpdate, secondaryInUnit(60n)));
 
   // Check notifier
-  t.deepEqual(notificationAfterPriceExceedsLimit.phase, ALLOCATION_PHASE.LIQUIDATED);
+  t.deepEqual(notificationAfterPriceExceedsLimit.phase, ALLOCATION_PHASE.REMOVED);
   t.deepEqual(notificationAfterPriceExceedsLimit.lpBalance, liquidityAmountAllocatedAfterUpdate);
   t.deepEqual(notificationAfterPriceExceedsLimit.liquidityBalance.central, centralAmountAllocatedAfterUpdate);
   t.deepEqual(notificationAfterPriceExceedsLimit.liquidityBalance.secondary, secondaryAmountAllocatedAfterUpdate);
@@ -1180,7 +1180,7 @@ test('update-boundaries-price-moves-below-old-lower-then-new-lower', async (t) =
   t.truthy(AmountMath.isGTE(secondaryInUnit(60n), secondaryAmountAllocatedAfterUpdate));
 
   // Check notifier
-  t.deepEqual(notificationAfterPriceExceedsLimit.phase, ALLOCATION_PHASE.LIQUIDATED);
+  t.deepEqual(notificationAfterPriceExceedsLimit.phase, ALLOCATION_PHASE.REMOVED);
   t.deepEqual(notificationAfterPriceExceedsLimit.lpBalance, liquidityAmountAllocatedAfterUpdate);
   t.deepEqual(notificationAfterPriceExceedsLimit.liquidityBalance.central, centralAmountAllocatedAfterUpdate);
   t.deepEqual(notificationAfterPriceExceedsLimit.liquidityBalance.secondary, secondaryAmountAllocatedAfterUpdate);
@@ -1364,7 +1364,7 @@ test('update-boundaries-price-moves-below-old-lower-then-new-upper', async (t) =
   t.truthy(AmountMath.isGTE(secondaryAmountAllocatedAfterUpdate, secondaryInUnit(60n)));
 
   // Check notifier
-  t.deepEqual(notificationAfterPriceExceedsLimit.phase, ALLOCATION_PHASE.LIQUIDATED);
+  t.deepEqual(notificationAfterPriceExceedsLimit.phase, ALLOCATION_PHASE.REMOVED);
   t.deepEqual(notificationAfterPriceExceedsLimit.lpBalance, liquidityAmountAllocatedAfterUpdate);
   t.deepEqual(notificationAfterPriceExceedsLimit.liquidityBalance.central, centralAmountAllocatedAfterUpdate);
   t.deepEqual(notificationAfterPriceExceedsLimit.liquidityBalance.secondary, secondaryAmountAllocatedAfterUpdate);
@@ -1481,7 +1481,7 @@ test('Test withdraw Liquidity', async (t) => {
   t.deepEqual(liquidityAmountAllocated, AmountMath.makeEmpty(liquidityBrand));
 
   // Check notifier
-  t.deepEqual(notificationAfterRemoveLiquidity.phase, ALLOCATION_PHASE.LIQUIDATED);
+  t.deepEqual(notificationAfterRemoveLiquidity.phase, ALLOCATION_PHASE.REMOVED);
   t.deepEqual(notificationAfterRemoveLiquidity.lpBalance, liquidityAmountAllocated);
   t.deepEqual(notificationAfterRemoveLiquidity.liquidityBalance.central, centralAmountAllocated);
   t.deepEqual(notificationAfterRemoveLiquidity.liquidityBalance.secondary, secondaryAmountAllocated);
@@ -1518,7 +1518,7 @@ test('Test withdraw Liquidity', async (t) => {
   ]);
 
     // Check notifier
-    t.deepEqual(notificationAfterWithdraw.phase, ALLOCATION_PHASE.CLOSED);
+    t.deepEqual(notificationAfterWithdraw.phase, ALLOCATION_PHASE.WITHDRAWN);
     t.deepEqual(notificationAfterWithdraw.lpBalance, withdrawLiquidityBalance);
     t.deepEqual(notificationAfterWithdraw.liquidityBalance.central, withdrawCentralBalance);
     t.deepEqual(notificationAfterWithdraw.liquidityBalance.secondary, withdrawSecondaryBalance);
