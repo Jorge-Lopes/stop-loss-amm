@@ -222,7 +222,7 @@ export async function startStopLoss(zoe, issuerKeywordRecord, terms) {
  * @param {Brand} secondaryBrand
  * @param {BigInt} boundryMarginValue
  */
-export const getBoundries =
+export const getBoundaries =
   async (fromCentralPA, centralAmountIn,
          secondaryBrand, boundryMarginValue = 20n) => {
 

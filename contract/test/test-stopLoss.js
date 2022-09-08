@@ -9,7 +9,7 @@ import {
   startServices,
   startStopLoss,
   swapSecondaryForCentral,
-  swapCentralForSecondary, getBoundries, moveFromCentralPriceUp, moveFromCentralPriceDown,
+  swapCentralForSecondary, getBoundaries, moveFromCentralPriceUp, moveFromCentralPriceDown,
 } from './helper.js';
 import { E } from '@endo/far';
 import { makeRatioFromAmounts } from '@agoric/zoe/src/contractSupport/ratio.js';
@@ -90,15 +90,15 @@ test('Test lock LP Tokens to contract', async (t) => {
   const centralIssuer = centralR.issuer;
   const secondaryIssuer = secondaryR.issuer;
 
-  const boundries = await getBoundries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
-  trace('Boundries', boundries);
+  const boundaries = await getBoundaries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
+  trace('Boundaries', boundaries);
 
   const terms = {
     ammPublicFacet,
     centralIssuer,
     secondaryIssuer,
     liquidityIssuer,
-    boundries
+    boundaries
   };
 
   const issuerKeywordRecord = harden({
@@ -187,15 +187,15 @@ test('Test remove Liquidity from AMM', async (t) => {
   const centralIssuer = centralR.issuer;
   const secondaryIssuer = secondaryR.issuer;
 
-  const boundries = await getBoundries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
-  trace('Boundries', boundries);
+  const boundaries = await getBoundaries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
+  trace('Boundaries', boundaries);
 
   const terms = {
     ammPublicFacet,
     centralIssuer,
     secondaryIssuer,
     liquidityIssuer,
-    boundries
+    boundaries
   };
 
   const issuerKeywordRecord = harden({
@@ -309,15 +309,15 @@ test('trigger-lp-removal-price-moves-above-upper', async (t) => {
   const centralIssuer = centralR.issuer;
   const secondaryIssuer = secondaryR.issuer;
 
-  const boundries = await getBoundries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
-  trace('Boundries', boundries);
+  const boundaries = await getBoundaries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
+  trace('Boundaries', boundaries);
 
   const terms = {
     ammPublicFacet,
     centralIssuer,
     secondaryIssuer,
     liquidityIssuer,
-    boundries
+    boundaries
   };
 
   const issuerKeywordRecord = harden({
@@ -359,7 +359,7 @@ test('trigger-lp-removal-price-moves-above-upper', async (t) => {
 
   console.log('Moving the price up...')
   const { inputPriceAmountOut: inputPriceAfter }  =
-    await moveFromCentralPriceUp(zoe, ammPublicFacet, secondaryR, centralR, liquidityIssuer, boundries.upper, 2n);
+    await moveFromCentralPriceUp(zoe, ammPublicFacet, secondaryR, centralR, liquidityIssuer, boundaries.upper, 2n);
   console.log('Done.')
 
   trace('Input price after', inputPriceAfter);
@@ -440,15 +440,15 @@ test('trigger-lp-removal-price-moves-below-lower', async (t) => {
   const centralIssuer = centralR.issuer;
   const secondaryIssuer = secondaryR.issuer;
 
-  const boundries = await getBoundries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
-  trace('Boundaries', boundries);
+  const boundaries = await getBoundaries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
+  trace('Boundaries', boundaries);
 
   const terms = {
     ammPublicFacet,
     centralIssuer,
     secondaryIssuer,
     liquidityIssuer,
-    boundries
+    boundaries
   };
 
   const issuerKeywordRecord = harden({
@@ -490,7 +490,7 @@ test('trigger-lp-removal-price-moves-below-lower', async (t) => {
 
   console.log('Moving the price up...');
   const { inputPriceAmountOut: inputPriceAfter, swapInterval } =
-    await moveFromCentralPriceDown(zoe, ammPublicFacet, secondaryR, centralR, liquidityIssuer, boundries.lower, 1n);
+    await moveFromCentralPriceDown(zoe, ammPublicFacet, secondaryR, centralR, liquidityIssuer, boundaries.lower, 1n);
   console.log('Done.');
   trace('InputPriceAfter', inputPriceAfter);
 
@@ -571,15 +571,15 @@ test('update-boundaries-price-moves-below-old-lower-boundary', async (t) => {
   const centralIssuer = centralR.issuer;
   const secondaryIssuer = secondaryR.issuer;
 
-  const boundries = await getBoundries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
-  trace('Boundaries', boundries);
+  const boundaries = await getBoundaries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
+  trace('Boundaries', boundaries);
 
   const terms = {
     ammPublicFacet,
     centralIssuer,
     secondaryIssuer,
     liquidityIssuer,
-    boundries
+    boundaries
   };
 
   const issuerKeywordRecord = harden({
@@ -625,8 +625,8 @@ test('update-boundaries-price-moves-below-old-lower-boundary', async (t) => {
     10n ** BigInt(secondaryR.displayInfo.decimalPlaces - 1)); // Update amount is 0,1 Secondary
 
   const newBoundaries = {
-    lower: makeRatioFromAmounts(AmountMath.subtract(boundries.lower.numerator, updateMargin), centralInUnit(1n)),
-    upper: boundries.upper,
+    lower: makeRatioFromAmounts(AmountMath.subtract(boundaries.lower.numerator, updateMargin), centralInUnit(1n)),
+    upper: boundaries.upper,
   };
 
   const updateResult = await E(creatorFacet).updateConfiguration(newBoundaries  );
@@ -634,12 +634,12 @@ test('update-boundaries-price-moves-below-old-lower-boundary', async (t) => {
 
   console.log('Moving the price down...');
   const { inputPriceAmountOut: inputPriceAfter, swapInterval } =
-    await moveFromCentralPriceDown(zoe, ammPublicFacet, secondaryR, centralR, liquidityIssuer, boundries.lower, 1n);
+    await moveFromCentralPriceDown(zoe, ammPublicFacet, secondaryR, centralR, liquidityIssuer, boundaries.lower, 1n);
   console.log('Done.');
   trace('InputPriceAfter', inputPriceAfter);
 
   // Check price against boundaries
-  t.truthy(AmountMath.isGTE(boundries.lower.numerator, inputPriceAfter));
+  t.truthy(AmountMath.isGTE(boundaries.lower.numerator, inputPriceAfter));
   t.truthy(AmountMath.isGTE(inputPriceAfter, newBoundaries.lower.numerator));
 
   await waitForPromisesToSettle();
@@ -718,15 +718,15 @@ test('update-boundaries-price-moves-above-old-upper-boundary', async (t) => {
   const centralIssuer = centralR.issuer;
   const secondaryIssuer = secondaryR.issuer;
 
-  const boundries = await getBoundries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
-  trace('Boundaries', boundries);
+  const boundaries = await getBoundaries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
+  trace('Boundaries', boundaries);
 
   const terms = {
     ammPublicFacet,
     centralIssuer,
     secondaryIssuer,
     liquidityIssuer,
-    boundries
+    boundaries
   };
 
   const issuerKeywordRecord = harden({
@@ -774,8 +774,8 @@ test('update-boundaries-price-moves-above-old-upper-boundary', async (t) => {
   // newLower = (oldLower.numerator - 0,1 Secodary) / 1 Central
   // newUpper = (oldUpper.numerator + 0,1 Secodary) / 1 Central
   const newBoundaries = {
-    lower: makeRatioFromAmounts(AmountMath.subtract(boundries.lower.numerator, updateMargin), centralInUnit(1n)),
-    upper: makeRatioFromAmounts(AmountMath.add(boundries.upper.numerator, updateMargin), centralInUnit(1n)),
+    lower: makeRatioFromAmounts(AmountMath.subtract(boundaries.lower.numerator, updateMargin), centralInUnit(1n)),
+    upper: makeRatioFromAmounts(AmountMath.add(boundaries.upper.numerator, updateMargin), centralInUnit(1n)),
   };
 
   const updateResult = await E(creatorFacet).updateConfiguration(newBoundaries);
@@ -783,12 +783,12 @@ test('update-boundaries-price-moves-above-old-upper-boundary', async (t) => {
 
   console.log('Moving the price down...');
   const { inputPriceAmountOut: inputPriceAfter } =
-    await moveFromCentralPriceUp(zoe, ammPublicFacet, secondaryR, centralR, liquidityIssuer, boundries.upper, 2n);
+    await moveFromCentralPriceUp(zoe, ammPublicFacet, secondaryR, centralR, liquidityIssuer, boundaries.upper, 2n);
   console.log('Done.');
   trace('InputPriceAfter', inputPriceAfter);
 
   // Check price against boundaries
-  t.truthy(AmountMath.isGTE(inputPriceAfter, boundries.upper.numerator));
+  t.truthy(AmountMath.isGTE(inputPriceAfter, boundaries.upper.numerator));
   t.truthy(AmountMath.isGTE(newBoundaries.upper.numerator, inputPriceAfter));
 
   await waitForPromisesToSettle();
@@ -867,15 +867,15 @@ test('update-boundaries-price-moves-above-old-upper-then-new-upper', async (t) =
   const centralIssuer = centralR.issuer;
   const secondaryIssuer = secondaryR.issuer;
 
-  const boundries = await getBoundries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
-  trace('Boundaries', boundries);
+  const boundaries = await getBoundaries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
+  trace('Boundaries', boundaries);
 
   const terms = {
     ammPublicFacet,
     centralIssuer,
     secondaryIssuer,
     liquidityIssuer,
-    boundries
+    boundaries
   };
 
   const issuerKeywordRecord = harden({
@@ -921,8 +921,8 @@ test('update-boundaries-price-moves-above-old-upper-then-new-upper', async (t) =
     10n ** BigInt(secondaryR.displayInfo.decimalPlaces - 1)); // Update amount is 0,1 Secondary
 
   const newBoundaries = {
-    lower: makeRatioFromAmounts(AmountMath.subtract(boundries.lower.numerator, updateMargin), centralInUnit(1n)),
-    upper: makeRatioFromAmounts(AmountMath.add(boundries.upper.numerator, updateMargin), centralInUnit(1n)),
+    lower: makeRatioFromAmounts(AmountMath.subtract(boundaries.lower.numerator, updateMargin), centralInUnit(1n)),
+    upper: makeRatioFromAmounts(AmountMath.add(boundaries.upper.numerator, updateMargin), centralInUnit(1n)),
   };
 
   const updateResult = await E(creatorFacet).updateConfiguration(newBoundaries  );
@@ -930,13 +930,13 @@ test('update-boundaries-price-moves-above-old-upper-then-new-upper', async (t) =
 
   console.log('Moving the price up...');
   const { inputPriceAmountOut: inputPriceAfter } =
-    await moveFromCentralPriceUp(zoe, ammPublicFacet, secondaryR, centralR, liquidityIssuer, boundries.upper, 1n);
+    await moveFromCentralPriceUp(zoe, ammPublicFacet, secondaryR, centralR, liquidityIssuer, boundaries.upper, 1n);
   console.log('Done.');
   trace('InputPriceAfter', inputPriceAfter);
 
   // Check price against boundaries
   t.truthy(AmountMath.isGTE(newBoundaries.upper.numerator, inputPriceAfter));
-  t.truthy(AmountMath.isGTE(inputPriceAfter, boundries.upper.numerator));
+  t.truthy(AmountMath.isGTE(inputPriceAfter, boundaries.upper.numerator));
 
   await waitForPromisesToSettle();
 
@@ -1051,15 +1051,15 @@ test('update-boundaries-price-moves-below-old-lower-then-new-lower', async (t) =
   const centralIssuer = centralR.issuer;
   const secondaryIssuer = secondaryR.issuer;
 
-  const boundries = await getBoundries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
-  trace('Boundaries', boundries);
+  const boundaries = await getBoundaries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
+  trace('Boundaries', boundaries);
 
   const terms = {
     ammPublicFacet,
     centralIssuer,
     secondaryIssuer,
     liquidityIssuer,
-    boundries
+    boundaries
   };
 
   const issuerKeywordRecord = harden({
@@ -1105,8 +1105,8 @@ test('update-boundaries-price-moves-below-old-lower-then-new-lower', async (t) =
     10n ** BigInt(secondaryR.displayInfo.decimalPlaces - 1)); // Update amount is 0,1 Secondary
 
   const newBoundaries = {
-    lower: makeRatioFromAmounts(AmountMath.subtract(boundries.lower.numerator, updateMargin), centralInUnit(1n)),
-    upper: makeRatioFromAmounts(AmountMath.add(boundries.upper.numerator, updateMargin), centralInUnit(1n)),
+    lower: makeRatioFromAmounts(AmountMath.subtract(boundaries.lower.numerator, updateMargin), centralInUnit(1n)),
+    upper: makeRatioFromAmounts(AmountMath.add(boundaries.upper.numerator, updateMargin), centralInUnit(1n)),
   };
 
   const updateResult = await E(creatorFacet).updateConfiguration(newBoundaries  );
@@ -1114,12 +1114,12 @@ test('update-boundaries-price-moves-below-old-lower-then-new-lower', async (t) =
 
   console.log('Moving the price down...');
   const { inputPriceAmountOut: inputPriceAfter } =
-    await moveFromCentralPriceDown(zoe, ammPublicFacet, secondaryR, centralR, liquidityIssuer, boundries.lower, 1n);
+    await moveFromCentralPriceDown(zoe, ammPublicFacet, secondaryR, centralR, liquidityIssuer, boundaries.lower, 1n);
   console.log('Done.');
   trace('InputPriceAfter', inputPriceAfter);
 
   // Check price against boundaries
-  t.truthy(AmountMath.isGTE(boundries.lower.numerator, inputPriceAfter));
+  t.truthy(AmountMath.isGTE(boundaries.lower.numerator, inputPriceAfter));
   t.truthy(AmountMath.isGTE(inputPriceAfter, newBoundaries.lower.numerator));
 
   await waitForPromisesToSettle();
@@ -1235,15 +1235,15 @@ test('update-boundaries-price-moves-below-old-lower-then-new-upper', async (t) =
   const centralIssuer = centralR.issuer;
   const secondaryIssuer = secondaryR.issuer;
 
-  const boundries = await getBoundries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
-  trace('Boundaries', boundries);
+  const boundaries = await getBoundaries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
+  trace('Boundaries', boundaries);
 
   const terms = {
     ammPublicFacet,
     centralIssuer,
     secondaryIssuer,
     liquidityIssuer,
-    boundries
+    boundaries
   };
 
   const issuerKeywordRecord = harden({
@@ -1289,8 +1289,8 @@ test('update-boundaries-price-moves-below-old-lower-then-new-upper', async (t) =
     10n ** BigInt(secondaryR.displayInfo.decimalPlaces - 1)); // Update amount is 0,1 Secondary
 
   const newBoundaries = {
-    lower: makeRatioFromAmounts(AmountMath.subtract(boundries.lower.numerator, updateMargin), centralInUnit(1n)),
-    upper: makeRatioFromAmounts(AmountMath.add(boundries.upper.numerator, updateMargin), centralInUnit(1n)),
+    lower: makeRatioFromAmounts(AmountMath.subtract(boundaries.lower.numerator, updateMargin), centralInUnit(1n)),
+    upper: makeRatioFromAmounts(AmountMath.add(boundaries.upper.numerator, updateMargin), centralInUnit(1n)),
   };
 
   const updateResult = await E(creatorFacet).updateConfiguration(newBoundaries  );
@@ -1298,12 +1298,12 @@ test('update-boundaries-price-moves-below-old-lower-then-new-upper', async (t) =
 
   console.log('Moving the price down...');
   const { inputPriceAmountOut: inputPriceAfter } =
-    await moveFromCentralPriceDown(zoe, ammPublicFacet, secondaryR, centralR, liquidityIssuer, boundries.lower, 1n);
+    await moveFromCentralPriceDown(zoe, ammPublicFacet, secondaryR, centralR, liquidityIssuer, boundaries.lower, 1n);
   console.log('Done.');
   trace('InputPriceAfter', inputPriceAfter);
 
   // Check price against boundaries
-  t.truthy(AmountMath.isGTE(boundries.lower.numerator, inputPriceAfter));
+  t.truthy(AmountMath.isGTE(boundaries.lower.numerator, inputPriceAfter));
   t.truthy(AmountMath.isGTE(inputPriceAfter, newBoundaries.lower.numerator));
 
   await waitForPromisesToSettle();
@@ -1418,14 +1418,14 @@ test('Test withdraw Liquidity', async (t) => {
   const centralIssuer = centralR.issuer;
   const secondaryIssuer = secondaryR.issuer;
 
-  const boundries = await getBoundries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
+  const boundaries = await getBoundaries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
 
   const terms = {
     ammPublicFacet,
     centralIssuer,
     secondaryIssuer,
     liquidityIssuer,
-    boundries
+    boundaries
   };
 
   const issuerKeywordRecord = harden({
@@ -1571,13 +1571,13 @@ test('boundryWatcher-failed-no-tokens-locked', async (t) => {
   const centralIssuer = centralR.issuer;
   const secondaryIssuer = secondaryR.issuer;
 
-  const boundries = await getBoundries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
-  trace('Boundries', boundries);
+  const boundaries = await getBoundaries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
+  trace('Boundaries', boundaries);
 
   const devPriceAuthority = makeManualPriceAuthority({
     actualBrandIn: centralR.brand,
     actualBrandOut: secondaryR.brand,
-    initialPrice: boundries.base,
+    initialPrice: boundaries.base,
     timer: buildManualTimer(console.log),
   });
 
@@ -1586,7 +1586,7 @@ test('boundryWatcher-failed-no-tokens-locked', async (t) => {
     centralIssuer,
     secondaryIssuer,
     liquidityIssuer,
-    boundries,
+    boundaries,
     devPriceAuthority
   };
 

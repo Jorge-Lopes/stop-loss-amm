@@ -26,7 +26,7 @@ const start = async (zcf) => {
     /** @type Issuer */ centralIssuer,
     /** @type Issuer */ secondaryIssuer,
     /** @type Issuer */ liquidityIssuer,
-    boundries,
+    boundaries,
     /** @type PriceAuthority */ devPriceAuthority = undefined,
   } = zcf.getTerms();
   assertIssuerKeywords(zcf, ['Central', 'Secondary', 'Liquidity']);
@@ -56,7 +56,7 @@ const start = async (zcf) => {
     updater.updateState(allocationState);
   }
 
-  assertBoundryShape(boundries, centralBrand, secondaryBrand);
+  assertBoundryShape(boundaries, centralBrand, secondaryBrand);
 
   const init = async () => {
     let fromCentralPriceAuthority;
@@ -70,7 +70,7 @@ const start = async (zcf) => {
 
     const boundryWatcher = makeBoundryWatcher({
       fromCentralPriceAuthority,
-      boundries,
+      boundaries,
       centralBrand,
       secondaryBrand,
     });
@@ -83,7 +83,7 @@ const start = async (zcf) => {
   // Initiate listening
   const {
     boundryWatcherPromise,
-    updateBoundries,
+    updateBoundaries,
   } = await init();
 
   const schedule = async () => {
@@ -215,8 +215,8 @@ const start = async (zcf) => {
     return zcf.makeInvitation(withdrawLiquidity, 'withdraw Liquidity');
   };
 
-  const updateConfiguration = async boundries => {
-    return await updateBoundries(boundries);
+  const updateConfiguration = async boundaries => {
+    return await updateBoundaries(boundaries);
   };
 
   const getBalanceByBrand = (keyword, issuer) => {

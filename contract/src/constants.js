@@ -3,7 +3,7 @@ export const BOUNDRY_WATCHER_STATUS = {
   FAIL: 2,
 };
 
-export const UPDATED_BOUNDRY_MESSAGE = 'Successfully updated boundries';
+export const UPDATED_BOUNDRY_MESSAGE = 'Successfully updated boundaries';
 
 /**
  * Constants for allocation phase,

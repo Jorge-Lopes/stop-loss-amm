@@ -9,21 +9,21 @@ const trace = makeTracer('Boundry Watcher Module');
 /**
  *
  * @param {PriceAuthority} fromCentralPriceAuthority
- * @param boundries
+ * @param boundaries
  * @param {Brand} centralBrand
  * @param {Brand} secondaryBrand
  */
 export const makeBoundryWatcher = ({
                                      fromCentralPriceAuthority,
-                                     boundries,
+                                     boundaries,
                                      centralBrand,
                                      secondaryBrand,
                                    }) => {
 
-  assertBoundryShape(boundries, centralBrand, secondaryBrand);
+  assertBoundryShape(boundaries, centralBrand, secondaryBrand);
 
   const boundryPromiseKit = makePromiseKit();
-  const { upper, lower } = boundries;
+  const { upper, lower } = boundaries;
 
   // Get mutable quotes
   /** @type MutableQuote */
@@ -35,17 +35,17 @@ export const makeBoundryWatcher = ({
   const upperBoundryMutableQuotePromise = E(upperBoundryMutableQuote).getPromise();
   const lowerBoundryMutableQuotePromise = E(lowerBoundryMutableQuote).getPromise();
 
-  const watchBoundries = async () => {
+  const watchBoundaries = async () => {
     const quote = await Promise.race([ upperBoundryMutableQuotePromise, lowerBoundryMutableQuotePromise ]);
     boundryPromiseKit.resolve({ code: BOUNDRY_WATCHER_STATUS.SUCCESS, quote });
   };
 
-  watchBoundries().catch(error => boundryPromiseKit.resolve({ code: BOUNDRY_WATCHER_STATUS.FAIL, error }));
+  watchBoundaries().catch(error => boundryPromiseKit.resolve({ code: BOUNDRY_WATCHER_STATUS.FAIL, error }));
 
-  const updateBoundries = async newBoundries => {
-    assertBoundryShape(newBoundries, centralBrand, secondaryBrand);
-    const { upper, lower } = newBoundries;
-    trace('Updating Boundries', newBoundries);
+  const updateBoundaries = async newBoundaries => {
+    assertBoundryShape(newBoundaries, centralBrand, secondaryBrand);
+    const { upper, lower } = newBoundaries;
+    trace('Updating Boundaries', newBoundaries);
 
     await Promise.all([
       E(upperBoundryMutableQuote).updateLevel(upper.denominator, upper.numerator),
@@ -57,6 +57,6 @@ export const makeBoundryWatcher = ({
 
   return harden({
     boundryWatcherPromise: boundryPromiseKit.promise,
-    updateBoundries,
+    updateBoundaries,
   });
 }

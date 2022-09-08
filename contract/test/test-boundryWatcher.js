@@ -4,7 +4,7 @@ import { E } from '@endo/far';
 import { getAmountIn, getAmountOut } from '@agoric/zoe/src/contractSupport/priceQuote.js';
 import { AmountMath, makeIssuerKit, AssetKind } from '@agoric/ertp';
 import { makeManualPriceAuthority } from '@agoric/zoe/tools/manualPriceAuthority.js';
-import { getBoundries, makeAssets } from './helper.js';
+import { getBoundaries, makeAssets } from './helper.js';
 import buildManualTimer from '@agoric/zoe/tools/manualTimer.js';
 import { makeRatio, makeRatioFromAmounts } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { makeBoundryWatcher } from '../src/boundryWatcher.js';
@@ -43,10 +43,10 @@ test('price-goes-above-upper', async t => {
     timer,
   });
 
-  const boundries = await getBoundries(fromCentralPriceAuthority, centralAmountOneUnit, secondaryBrand);
-  trace(boundries);
+  const boundaries = await getBoundaries(fromCentralPriceAuthority, centralAmountOneUnit, secondaryBrand);
+  trace(boundaries);
 
-  const { boundryWatcherPromise } = makeBoundryWatcher({ fromCentralPriceAuthority, boundries, centralBrand, secondaryBrand });
+  const { boundryWatcherPromise } = makeBoundryWatcher({ fromCentralPriceAuthority, boundaries, centralBrand, secondaryBrand });
 
   boundryWatcherPromise.then(({ code, quote }) => {
     t.is(code, BOUNDRY_WATCHER_STATUS.SUCCESS);
@@ -59,7 +59,7 @@ test('price-goes-above-upper', async t => {
     });
   });
 
-  const { upper } = boundries;
+  const { upper } = boundaries;
 
   await E(fromCentralPriceAuthority).setPrice(makeRatioFromAmounts(
     AmountMath.make(secondaryBrand, upper.numerator.value - 5n),
@@ -103,10 +103,10 @@ test('price-goes-below-lower', async t => {
     timer,
   });
 
-  const boundries = await getBoundries(fromCentralPriceAuthority, centralAmountOneUnit, secondaryBrand);
-  trace(boundries);
+  const boundaries = await getBoundaries(fromCentralPriceAuthority, centralAmountOneUnit, secondaryBrand);
+  trace(boundaries);
 
-  const { boundryWatcherPromise } = makeBoundryWatcher({ fromCentralPriceAuthority, boundries, centralBrand, secondaryBrand });
+  const { boundryWatcherPromise } = makeBoundryWatcher({ fromCentralPriceAuthority, boundaries, centralBrand, secondaryBrand });
 
   boundryWatcherPromise.then(({ code, quote }) => {
     t.is(code, BOUNDRY_WATCHER_STATUS.SUCCESS);
@@ -119,7 +119,7 @@ test('price-goes-below-lower', async t => {
     });
   });
 
-  const { lower } = boundries;
+  const { lower } = boundaries;
 
   await E(fromCentralPriceAuthority).setPrice(makeRatioFromAmounts(
     AmountMath.make(secondaryBrand, lower.numerator.value + 2n),
@@ -163,10 +163,10 @@ test('update-upper-boundry-then-price-goes-above-upper', async t => {
     initialPrice: makeRatio(2n * 10n ** BigInt(secondaryDecimalPlaces), secondaryBrand, 10n ** BigInt(centralDecimalPlaces), centralBrand),
     timer,
   });
-  const boundries = await getBoundries(fromCentralPriceAuthority, centralAmountOneUnit, secondaryBrand);
-  trace(boundries);
+  const boundaries = await getBoundaries(fromCentralPriceAuthority, centralAmountOneUnit, secondaryBrand);
+  trace(boundaries);
 
-  const { boundryWatcherPromise, updateBoundries } = makeBoundryWatcher({ fromCentralPriceAuthority, boundries, centralBrand, secondaryBrand });
+  const { boundryWatcherPromise, updateBoundaries } = makeBoundryWatcher({ fromCentralPriceAuthority, boundaries, centralBrand, secondaryBrand });
 
   boundryWatcherPromise.then(({ code, quote }) => {
     t.is(code, BOUNDRY_WATCHER_STATUS.SUCCESS);
@@ -179,7 +179,7 @@ test('update-upper-boundry-then-price-goes-above-upper', async t => {
     });
   });
 
-  const { upper, lower } = boundries;
+  const { upper, lower } = boundaries;
 
   await E(fromCentralPriceAuthority).setPrice(
     makeRatioFromAmounts(
@@ -202,7 +202,7 @@ test('update-upper-boundry-then-price-goes-above-upper', async t => {
     lower,
   };
 
-  const updateResultMessage = await updateBoundries(newBoundryConf);
+  const updateResultMessage = await updateBoundaries(newBoundryConf);
   t.is(updateResultMessage, UPDATED_BOUNDRY_MESSAGE);
 
   // Set the price just above the old upper boundry
@@ -246,10 +246,10 @@ test('update-lower-boundry-then-price-goes-below-lower', async t => {
     timer,
   });
 
-  const boundries = await getBoundries(fromCentralPriceAuthority, centralAmountOneUnit, secondaryBrand);
-  trace(boundries);
+  const boundaries = await getBoundaries(fromCentralPriceAuthority, centralAmountOneUnit, secondaryBrand);
+  trace(boundaries);
 
-  const { boundryWatcherPromise, updateBoundries } = makeBoundryWatcher({ fromCentralPriceAuthority, boundries, centralBrand, secondaryBrand });
+  const { boundryWatcherPromise, updateBoundaries } = makeBoundryWatcher({ fromCentralPriceAuthority, boundaries, centralBrand, secondaryBrand });
 
   boundryWatcherPromise.then(({ code, quote }) => {
     t.is(code, BOUNDRY_WATCHER_STATUS.SUCCESS);
@@ -262,7 +262,7 @@ test('update-lower-boundry-then-price-goes-below-lower', async t => {
     });
   });
 
-  const { upper, lower } = boundries;
+  const { upper, lower } = boundaries;
 
   await E(fromCentralPriceAuthority).setPrice(
     makeRatioFromAmounts(
@@ -285,7 +285,7 @@ test('update-lower-boundry-then-price-goes-below-lower', async t => {
       centralAmountOneUnit),
   };
 
-  const updateResultMessage = await updateBoundries(newBoundryConf);
+  const updateResultMessage = await updateBoundaries(newBoundryConf);
   t.is(updateResultMessage, UPDATED_BOUNDRY_MESSAGE);
 
   // Set the price just below the old lower boundry
@@ -307,7 +307,7 @@ test('update-lower-boundry-then-price-goes-below-lower', async t => {
 
 });
 
-test('update-both-boundries-then-price-goes-above-upper', async t => {
+test('update-both-boundaries-then-price-goes-above-upper', async t => {
 
   const {
     timer,
@@ -328,10 +328,10 @@ test('update-both-boundries-then-price-goes-above-upper', async t => {
     initialPrice: makeRatio(2n * 10n ** BigInt(secondaryDecimalPlaces), secondaryBrand, 10n ** BigInt(centralDecimalPlaces), centralBrand),
     timer,
   });
-  const boundries = await getBoundries(fromCentralPriceAuthority, centralAmountOneUnit, secondaryBrand);
-  trace(boundries);
+  const boundaries = await getBoundaries(fromCentralPriceAuthority, centralAmountOneUnit, secondaryBrand);
+  trace(boundaries);
 
-  const { boundryWatcherPromise, updateBoundries } = makeBoundryWatcher({ fromCentralPriceAuthority, boundries, centralBrand, secondaryBrand });
+  const { boundryWatcherPromise, updateBoundaries } = makeBoundryWatcher({ fromCentralPriceAuthority, boundaries, centralBrand, secondaryBrand });
 
   boundryWatcherPromise.then(({ code, quote }) => {
     t.is(code, BOUNDRY_WATCHER_STATUS.SUCCESS);
@@ -344,7 +344,7 @@ test('update-both-boundries-then-price-goes-above-upper', async t => {
     });
   });
 
-  const { upper, lower } = boundries;
+  const { upper, lower } = boundaries;
 
   await E(fromCentralPriceAuthority).setPrice(
     makeRatioFromAmounts(
@@ -369,7 +369,7 @@ test('update-both-boundries-then-price-goes-above-upper', async t => {
       centralAmountOneUnit),
   };
 
-  const updateResultMessage = await updateBoundries(newBoundryConf);
+  const updateResultMessage = await updateBoundaries(newBoundryConf);
   t.is(updateResultMessage, UPDATED_BOUNDRY_MESSAGE);
 
   // Set the price just above the old upper boundry
@@ -412,12 +412,12 @@ test('mutableQuote-promises-rejected', async t => {
     initialPrice: makeRatio(2n * 10n ** BigInt(secondaryDecimalPlaces), secondaryBrand, 10n ** BigInt(centralDecimalPlaces), centralBrand),
     timer,
   });
-  const boundries = await getBoundries(fromCentralPriceAuthority, centralAmountOneUnit, secondaryBrand);
-  trace(boundries);
+  const boundaries = await getBoundaries(fromCentralPriceAuthority, centralAmountOneUnit, secondaryBrand);
+  trace(boundaries);
 
   const { boundryWatcherPromise } = makeBoundryWatcher({
     fromCentralPriceAuthority,
-    boundries,
+    boundaries,
     centralBrand,
     secondaryBrand,
   });
@@ -439,7 +439,7 @@ test('mutableQuote-promises-rejected', async t => {
 
 /**
  * Test Case
- * Update the one of the boundries in a way that the updated boundry falls outside of the allowed price window
+ * Update the one of the boundaries in a way that the updated boundry falls outside of the allowed price window
  * according to the current price. So the boundryWatcher promise should resolve as soon as this update is made.
  * In real life this would lead to a trigger of an LP removal from AMM. Should we allow it?
  */

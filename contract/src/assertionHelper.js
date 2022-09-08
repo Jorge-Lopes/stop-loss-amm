@@ -6,12 +6,12 @@ const tracer = makeTracer('assertionHelper');
 
 /**
  *
- * @param boundries
+ * @param boundaries
  * @param {Brand} centralBrand
  * @param {Brand} secondaryBrand
  */
-export const assertBoundryShape = (boundries, centralBrand, secondaryBrand) => {
-  const { upper, lower } = boundries;
+export const assertBoundryShape = (boundaries, centralBrand, secondaryBrand) => {
+  const { upper, lower } = boundaries;
 
   assert(upper, X`Upper property should exist in a boundry configuration`);
   assert(lower, X`Upper property should exist in a boundry configuration`);
