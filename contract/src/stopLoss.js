@@ -98,7 +98,7 @@ const start = async (zcf) => {
 
     tracer('Resolving with the quote', getAmountOut(quote));
 
-    updateAllocationState(ALLOCATION_PHASE.LIQUIDATING);
+    updateAllocationState(ALLOCATION_PHASE.REMOVING);
     console.log('REMOVING_LP_TOKENS');
 
     await removeLiquidityFromAmm();
@@ -169,7 +169,7 @@ const start = async (zcf) => {
     const [amounts, removeOfferResult] = await Promise.all([deposited, E(liquiditySeat).getOfferResult()]);
     tracer('Amounts from removal', amounts);
 
-    updateAllocationState(ALLOCATION_PHASE.LIQUIDATED);
+    updateAllocationState(ALLOCATION_PHASE.REMOVED);
 
     return removeOfferResult;
   };
@@ -192,7 +192,7 @@ const start = async (zcf) => {
         secondaryBrand,
       );
 
-      // assert that ALLOCATION_PHASE is LIQUIDATED
+      // assert that ALLOCATION_PHASE is REMOVED
 
       creatorSeat.incrementBy(
         stopLossSeat.decrementBy(
@@ -207,7 +207,7 @@ const start = async (zcf) => {
 
       creatorSeat.exit();
 
-      updateAllocationState(ALLOCATION_PHASE.CLOSED);
+      updateAllocationState(ALLOCATION_PHASE.WITHDRAWN);
 
       return `Liquidity withdraw to creator seat`;
     };
