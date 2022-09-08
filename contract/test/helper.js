@@ -211,29 +211,29 @@ export async function startStopLoss(zoe, issuerKeywordRecord, terms) {
 
 /**
  * This function gets the current price for a pair from the AMM and calculates
- * an upper and a lower boundry for stopLoss contract.
+ * an upper and a lower boundary for stopLoss contract.
  *
  * We do the calculation by asking the current price to `fromCentral` priceAuthority
  * we get from the pool. Then we add and substract an amount we calculated from a ratio
- * called `boundryMarginRatio`.
+ * called `boundaryMarginRatio`.
  *
  * @param {PriceAuthority} fromCentralPA
  * @param {Amount} centralAmountIn
  * @param {Brand} secondaryBrand
- * @param {BigInt} boundryMarginValue
+ * @param {BigInt} boundaryMarginValue
  */
 export const getBoundaries =
   async (fromCentralPA, centralAmountIn,
-         secondaryBrand, boundryMarginValue = 20n) => {
+         secondaryBrand, boundaryMarginValue = 20n) => {
 
     const quote = await E(fromCentralPA).quoteGiven(
       centralAmountIn,
       secondaryBrand,
     );
 
-    const boundryMarginRatio = makeRatio(boundryMarginValue, secondaryBrand);
+    const boundaryMarginRatio = makeRatio(boundaryMarginValue, secondaryBrand);
     const baseAmountOut = getAmountOut(quote);
-    const marginAmount = floorMultiplyBy(baseAmountOut, boundryMarginRatio);
+    const marginAmount = floorMultiplyBy(baseAmountOut, boundaryMarginRatio);
 
     return {
       lower: makeRatioFromAmounts(
@@ -256,7 +256,7 @@ export const getBoundaries =
  * @param {IssuerKit} secondaryR
  * @param {IssuerKit} centralR
  * @param {Issuer} liquidityIssuer
- * @param {Ratio} upperBoundry
+ * @param {Ratio} upperBoundary
  * @param {BigInt} swapInterval
  * @returns {Promise<void>}
  */
@@ -265,7 +265,7 @@ export const moveFromCentralPriceUp = async (zoe,
                                              secondaryR,
                                              centralR,
                                              liquidityIssuer,
-                                             upperBoundry,
+                                             upperBoundary,
                                              swapInterval = 1n) => {
   const {
     swapSecondaryForCentral,
@@ -276,7 +276,7 @@ export const moveFromCentralPriceUp = async (zoe,
   const { amountOut } = await E(ammPublicFacet).getInputPrice(makeCentral(1n), makeSecondary(0n));
   let inputPriceAmountOut = amountOut;
 
-  while (AmountMath.isGTE(upperBoundry.numerator, inputPriceAmountOut)) {
+  while (AmountMath.isGTE(upperBoundary.numerator, inputPriceAmountOut)) {
     await swapSecondaryForCentral(swapInterval);
 
     const { amountOut } = await E(ammPublicFacet).getInputPrice(makeCentral(1n), makeSecondary(0n));
@@ -294,7 +294,7 @@ export const moveFromCentralPriceUp = async (zoe,
  * @param {IssuerKit} secondaryR
  * @param {IssuerKit} centralR
  * @param {Issuer} liquidityIssuer
- * @param {Ratio} lowerBoundry
+ * @param {Ratio} lowerBoundary
  * @param {BigInt} swapInterval
  * @returns {Promise<void>}
  */
@@ -303,7 +303,7 @@ export const moveFromCentralPriceDown = async (zoe,
                                                secondaryR,
                                                centralR,
                                                liquidityIssuer,
-                                               lowerBoundry,
+                                               lowerBoundary,
                                                swapInterval = 1n) => {
 
   const {
@@ -315,7 +315,7 @@ export const moveFromCentralPriceDown = async (zoe,
   const { amountOut } = await E(ammPublicFacet).getInputPrice(makeCentral(1n), makeSecondary(0n));
   let inputPriceAmountOut = amountOut;
 
-  while (AmountMath.isGTE(inputPriceAmountOut, lowerBoundry.numerator)) {
+  while (AmountMath.isGTE(inputPriceAmountOut, lowerBoundary.numerator)) {
     await swapCentralForSecondary(swapInterval);
 
     const { amountOut } = await E(ammPublicFacet).getInputPrice(makeCentral(1n), makeSecondary(0n));

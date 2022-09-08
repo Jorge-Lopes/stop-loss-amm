@@ -10,13 +10,13 @@ const tracer = makeTracer('assertionHelper');
  * @param {Brand} centralBrand
  * @param {Brand} secondaryBrand
  */
-export const assertBoundryShape = (boundaries, centralBrand, secondaryBrand) => {
+export const assertBoundaryShape = (boundaries, centralBrand, secondaryBrand) => {
   const { upper, lower } = boundaries;
 
-  assert(upper, X`Upper property should exist in a boundry configuration`);
-  assert(lower, X`Upper property should exist in a boundry configuration`);
+  assert(upper, X`Upper property should exist in a boundary configuration`);
+  assert(lower, X`Upper property should exist in a boundary configuration`);
 
-  // upper and lower boundry should be a ratio
+  // upper and lower boundary should be a ratio
   assertIsRatio(upper);
   assertIsRatio(lower);
 

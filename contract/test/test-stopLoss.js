@@ -15,7 +15,7 @@ import { E } from '@endo/far';
 import { makeRatioFromAmounts } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { waitForPromisesToSettle } from '@agoric/run-protocol/test/supports.js';
 import { AmountMath } from '@agoric/ertp';
-import { ALLOCATION_PHASE, UPDATED_BOUNDRY_MESSAGE } from '../src/constants.js';
+import { ALLOCATION_PHASE, UPDATED_BOUNDARY_MESSAGE } from '../src/constants.js';
 import { makeManualPriceAuthority } from '@agoric/zoe/tools/manualPriceAuthority.js';
 import buildManualTimer from '@agoric/zoe/tools/manualTimer.js';
 
@@ -628,7 +628,7 @@ test('update-boundaries-price-moves-below-old-lower-boundary', async (t) => {
   };
 
   const updateResult = await E(creatorFacet).updateConfiguration(newBoundaries  );
-  t.deepEqual(updateResult, UPDATED_BOUNDRY_MESSAGE);
+  t.deepEqual(updateResult, UPDATED_BOUNDARY_MESSAGE);
 
   console.log('Moving the price down...');
   const { inputPriceAmountOut: inputPriceAfter, swapInterval } =
@@ -776,7 +776,7 @@ test('update-boundaries-price-moves-above-old-upper-boundary', async (t) => {
   };
 
   const updateResult = await E(creatorFacet).updateConfiguration(newBoundaries);
-  t.deepEqual(updateResult, UPDATED_BOUNDRY_MESSAGE);
+  t.deepEqual(updateResult, UPDATED_BOUNDARY_MESSAGE);
 
   console.log('Moving the price down...');
   const { inputPriceAmountOut: inputPriceAfter } =
@@ -922,7 +922,7 @@ test('update-boundaries-price-moves-above-old-upper-then-new-upper', async (t) =
   };
 
   const updateResult = await E(creatorFacet).updateConfiguration(newBoundaries  );
-  t.deepEqual(updateResult, UPDATED_BOUNDRY_MESSAGE);
+  t.deepEqual(updateResult, UPDATED_BOUNDARY_MESSAGE);
 
   console.log('Moving the price up...');
   const { inputPriceAmountOut: inputPriceAfter } =
@@ -1105,7 +1105,7 @@ test('update-boundaries-price-moves-below-old-lower-then-new-lower', async (t) =
   };
 
   const updateResult = await E(creatorFacet).updateConfiguration(newBoundaries  );
-  t.deepEqual(updateResult, UPDATED_BOUNDRY_MESSAGE);
+  t.deepEqual(updateResult, UPDATED_BOUNDARY_MESSAGE);
 
   console.log('Moving the price down...');
   const { inputPriceAmountOut: inputPriceAfter } =
@@ -1288,7 +1288,7 @@ test('update-boundaries-price-moves-below-old-lower-then-new-upper', async (t) =
   };
 
   const updateResult = await E(creatorFacet).updateConfiguration(newBoundaries  );
-  t.deepEqual(updateResult, UPDATED_BOUNDRY_MESSAGE);
+  t.deepEqual(updateResult, UPDATED_BOUNDARY_MESSAGE);
 
   console.log('Moving the price down...');
   const { inputPriceAmountOut: inputPriceAfter } =
@@ -1520,7 +1520,7 @@ test('Test withdraw Liquidity', async (t) => {
     t.log(notificationAfterWithdraw);
 });
 
-test('boundryWatcher-failed-no-tokens-locked', async (t) => {
+test('boundaryWatcher-failed-no-tokens-locked', async (t) => {
   const { zoe, amm, centralR, secondaryR } = await startServices(t);
   const centralInitialValue = 10n;
   const secondaryInitialValue = 20n;

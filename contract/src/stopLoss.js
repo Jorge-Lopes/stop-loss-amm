@@ -8,10 +8,10 @@ import {
 import { Far, E } from '@endo/far';
 import { AmountMath } from '@agoric/ertp';
 import { offerTo } from '@agoric/zoe/src/contractSupport/index.js';
-import { assertBoundryShape, assertExecutionMode } from './assertionHelper.js';
-import { makeBoundryWatcher } from './boundryWatcher.js';
+import { assertBoundaryShape, assertExecutionMode } from './assertionHelper.js';
+import { makeBoundaryWatcher } from './boundaryWatcher.js';
 import { makeNotifierKit } from '@agoric/notifier';
-import { ALLOCATION_PHASE, BOUNDRY_WATCHER_STATUS } from './constants.js';
+import { ALLOCATION_PHASE, BOUNDARY_WATCHER_STATUS } from './constants.js';
 import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
 
 const tracer = makeTracer('StopLoss');
@@ -56,7 +56,7 @@ const start = async (zcf) => {
     updater.updateState(allocationState);
   }
 
-  assertBoundryShape(boundaries, centralBrand, secondaryBrand);
+  assertBoundaryShape(boundaries, centralBrand, secondaryBrand);
 
   const init = async () => {
     let fromCentralPriceAuthority;
@@ -68,7 +68,7 @@ const start = async (zcf) => {
       fromCentralPriceAuthority = devPriceAuthority;
     }
 
-    const boundryWatcher = makeBoundryWatcher({
+    const boundaryWatcher = makeBoundaryWatcher({
       fromCentralPriceAuthority,
       boundaries,
       centralBrand,
@@ -77,22 +77,22 @@ const start = async (zcf) => {
 
     updateAllocationState(ALLOCATION_PHASE.SCHEDULED);
 
-    return boundryWatcher;
+    return boundaryWatcher;
   };
 
   // Initiate listening
   const {
-    boundryWatcherPromise,
+    boundaryWatcherPromise,
     updateBoundaries,
   } = await init();
 
   const schedule = async () => {
-    // Wait for the price boundry being violated
-    const { code, quote, error } = await boundryWatcherPromise;
+    // Wait for the price boundary being violated
+    const { code, quote, error } = await boundaryWatcherPromise;
 
-    if (code === BOUNDRY_WATCHER_STATUS.FAIL) {
+    if (code === BOUNDARY_WATCHER_STATUS.FAIL) {
       updateAllocationState(ALLOCATION_PHASE.ERROR);
-      tracer('Boundry watcher error', error);
+      tracer('Boundary watcher error', error);
       return;
     }
 
