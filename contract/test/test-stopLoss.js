@@ -1526,7 +1526,7 @@ test('Test withdraw Liquidity', async (t) => {
     t.log(notificationAfterWithdraw);
 });
 
-test('boundryWatcher-failed', async (t) => {
+test('boundryWatcher-failed-no-tokens-locked', async (t) => {
   const { zoe, amm, centralR, secondaryR } = await startServices(t);
   const centralInitialValue = 10n;
   const secondaryInitialValue = 20n;
