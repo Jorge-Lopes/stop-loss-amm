@@ -286,7 +286,6 @@ test('trigger-lp-removal-price-moves-above-upper', async (t) => {
     secondaryInitialValue,
   );
 
-  // Add liquidity offer (secondary:central) 40_000:30_000.
   const centralValue = 30n;
   const secondaryValue = 60n;
 
@@ -548,7 +547,6 @@ test('update-boundaries-price-moves-below-old-lower-boundary', async (t) => {
     secondaryInitialValue,
   );
 
-  // Add liquidity offer (secondary:central) 40_000:30_000.
   const centralValue = 30n;
   const secondaryValue = 60n;
 
@@ -695,7 +693,6 @@ test('update-boundaries-price-moves-above-old-upper-boundary', async (t) => {
     secondaryInitialValue,
   );
 
-  // Add liquidity offer (secondary:central) 40_000:30_000.
   const centralValue = 30n;
   const secondaryValue = 60n;
 
@@ -844,7 +841,6 @@ test('update-boundaries-price-moves-above-old-upper-then-new-upper', async (t) =
     secondaryInitialValue,
   );
 
-  // Add liquidity offer (secondary:central) 40_000:30_000.
   const centralValue = 30n;
   const secondaryValue = 60n;
 
@@ -1028,7 +1024,6 @@ test('update-boundaries-price-moves-below-old-lower-then-new-lower', async (t) =
     secondaryInitialValue,
   );
 
-  // Add liquidity offer (secondary:central) 40_000:30_000.
   const centralValue = 30n;
   const secondaryValue = 60n;
 
@@ -1212,7 +1207,6 @@ test('update-boundaries-price-moves-below-old-lower-then-new-upper', async (t) =
     secondaryInitialValue,
   );
 
-  // Add liquidity offer (secondary:central) 40_000:30_000.
   const centralValue = 30n;
   const secondaryValue = 60n;
 
@@ -1548,7 +1542,6 @@ test('boundryWatcher-failed-no-tokens-locked', async (t) => {
     secondaryInitialValue,
   );
 
-  // Add liquidity offer (secondary:central) 40_000:30_000.
   const centralValue = 30n;
   const secondaryValue = 60n;
 

@@ -82,7 +82,6 @@ test('amm add liquidity', async (t) => {
     `poolAllocation after initialization`,
   );
 
-  // Add liquidity offer (secondary:central) 40_000:30_000.
   const centralValue = 30_000n;
   const secondaryValue = 70_000n;
 
@@ -146,7 +145,6 @@ test('amm add and remove liquidity', async (t) => {
     `poolAllocation after initialization`,
   );
 
-  // Add liquidity offer (secondary:central) 40_000:30_000.
   const centralValue = 30_000n;
   const secondaryValue = 70_000n;
 
