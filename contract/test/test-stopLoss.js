@@ -254,8 +254,8 @@ test('Test remove Liquidity from AMM', async (t) => {
   });
   // Check Balances
   t.deepEqual(liquidityAmountAllocated, AmountMath.makeEmpty(liquidityBrand));
-  t.truthy(AmountMath.isGTE(centralAmountAllocated, centralInUnit(30n)));
-  t.truthy(AmountMath.isGTE(secondaryInUnit(60n), secondaryAmountAllocated));
+  t.deepEqual(centralAmountAllocated, centralInUnit(30n));
+  t.deepEqual(secondaryInUnit(60n), secondaryAmountAllocated);
 
   // Check notifier
   t.deepEqual(notificationAfterRemoveLiquidity.phase, ALLOCATION_PHASE.LIQUIDATED);
