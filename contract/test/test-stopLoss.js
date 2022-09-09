@@ -118,25 +118,163 @@ test('Test lock LP Tokens to contract', async (t) => {
 
   t.deepEqual(initialNotification.phase, ALLOCATION_PHASE.SCHEDULED);
 
-  const addLpTokensInvitation =
+  const lockLpTokensInvitation =
     E(creatorFacet).makeLockLPTokensInvitation();
   const proposal = harden({ give: { Liquidity: lpTokenAmount } });
   const paymentKeywordRecord = harden({ Liquidity: Liquidity });
 
-  const addLpTokenSeat = await E(zoe).offer(
-    addLpTokensInvitation,
+  const lockLpTokenSeat = await E(zoe).offer(
+    lockLpTokensInvitation,
     proposal,
     paymentKeywordRecord,
   );
-  const [addLpTokensMessage, addLpTokenBalance, { value: notificationAfterLPLock }] = await Promise.all([
-    E(addLpTokenSeat).getOfferResult(),
+  const [lockLpTokensMessage, lockLpTokenBalance, { value: notificationAfterLPLock }] = await Promise.all([
+    E(lockLpTokenSeat).getOfferResult(),
     E(publicFacet).getBalanceByBrand('Liquidity', lpTokenIssuer),
     E(notfierP).getUpdateSince(),
   ]);
 
-  t.deepEqual(addLpTokensMessage, `LP Tokens locked in the value of ${lpTokenAmount.value}`);
-  t.deepEqual(addLpTokenBalance, lpTokenAmount); // Make sure the balance in the contract is as expected
+  t.deepEqual(lockLpTokensMessage, `LP Tokens locked in the value of ${lpTokenAmount.value}`);
+  t.deepEqual(lockLpTokenBalance, lpTokenAmount); // Make sure the balance in the contract is as expected
   t.deepEqual(notificationAfterLPLock.phase, ALLOCATION_PHASE.ACTIVE);
+});
+
+test('Test lock additional LP Tokens to contract', async (t) => {
+  const { /** @type ZoeService */ zoe,
+    /** @type XYKAMMPublicFacet */ amm,
+    /** @type IssuerKit */ centralR,
+    /** @type IssuerKit */ secondaryR,
+  } = await startServices(t);
+  const centralInitialValue = 10n;
+  const secondaryInitialValue = 20n;
+
+  /** @type XYKAMMPublicFacet */
+  const ammPublicFacet = amm.ammPublicFacet;
+
+  const { makeAmountBuilderInUnit } = t.context;
+
+  const { makeAmount: centralInUnit } = makeAmountBuilderInUnit(centralR.brand, centralR.displayInfo);
+  const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
+
+  const { /** @type Issuer */ lpTokenIssuer } = await startAmmPool(
+    zoe,
+    ammPublicFacet,
+    centralR,
+    secondaryR,
+    centralInitialValue,
+    secondaryInitialValue,
+  );
+
+  const centralValue = 30n;
+  const secondaryValue = 60n;
+
+  const payout = await addLiquidityToPool(
+    zoe,
+    ammPublicFacet,
+    centralR,
+    secondaryR,
+    lpTokenIssuer,
+    centralValue,
+    secondaryValue,
+  );
+
+  const { Liquidity } = payout;
+  const [lpTokenAmount, { fromCentral: fromCentralPA }] = await Promise.all([
+    E(lpTokenIssuer).getAmountOf(Liquidity),
+    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand)
+  ]);
+
+  const centralIssuer = centralR.issuer;
+  const secondaryIssuer = secondaryR.issuer;
+
+  const boundaries = await getBoundaries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
+  trace('Boundaries', boundaries);
+
+  const terms = {
+    ammPublicFacet,
+    centralIssuer,
+    secondaryIssuer,
+    lpTokenIssuer,
+    boundaries
+  };
+
+  const issuerKeywordRecord = harden({
+    Central: centralIssuer,
+    Secondary: secondaryIssuer,
+    Liquidity: lpTokenIssuer,
+  });
+
+  const { creatorFacet, publicFacet } = await startStopLoss(
+    zoe,
+    issuerKeywordRecord,
+    terms,
+  );
+
+  const notfierP = E(creatorFacet).getNotifier();
+  const { value: initialNotification } = await E(notfierP).getUpdateSince();
+
+  t.deepEqual(initialNotification.phase, ALLOCATION_PHASE.SCHEDULED);
+
+  const lockLpTokensInvitation =
+    E(creatorFacet).makeLockLPTokensInvitation();
+  const proposal = harden({ give: { Liquidity: lpTokenAmount } });
+  const paymentKeywordRecord = harden({ Liquidity: Liquidity });
+
+  const lockLpTokenSeat = await E(zoe).offer(
+    lockLpTokensInvitation,
+    proposal,
+    paymentKeywordRecord,
+  );
+  const [lockLpTokensMessage, lockLpTokenBalance, { value: notificationAfterLPLock }] = await Promise.all([
+    E(lockLpTokenSeat).getOfferResult(),
+    E(publicFacet).getBalanceByBrand('Liquidity', lpTokenIssuer),
+    E(notfierP).getUpdateSince(),
+  ]);
+
+  t.deepEqual(lockLpTokensMessage, `LP Tokens locked in the value of ${lpTokenAmount.value}`);
+  t.deepEqual(lockLpTokenBalance, lpTokenAmount); // Make sure the balance in the contract is as expected
+  t.deepEqual(notificationAfterLPLock.phase, ALLOCATION_PHASE.ACTIVE);
+
+  // lock additional LP Tokens
+  const additionalCentralValue = 20n;
+  const additionalSecondaryValue = 40n;
+
+  const additionalPayout = await addLiquidityToPool(
+    zoe,
+    ammPublicFacet,
+    centralR,
+    secondaryR,
+    lpTokenIssuer,
+    additionalCentralValue,
+    additionalSecondaryValue,
+  );
+
+  const { Liquidity: additionalLiquidityPayment } = additionalPayout;
+  const additionalLpTokenAmount = await E(lpTokenIssuer).getAmountOf(additionalLiquidityPayment);
+
+  const lockAdditionalLpTokensInvitation =
+    E(creatorFacet).makeLockLPTokensInvitation();
+  const additionalProposal = harden({ give: { Liquidity: additionalLpTokenAmount } });
+  const additionalPaymentKeywordRecord = harden({ Liquidity: additionalLiquidityPayment });
+
+  const lockAdditionalLpTokenSeat = await E(zoe).offer(
+    lockAdditionalLpTokensInvitation,
+    additionalProposal,
+    additionalPaymentKeywordRecord,
+  );
+  const [lockAdditionalLpTokensMessage, lockTotalLpTokenBalance, { value: notificationAfterAdditionalLPLock }] = await Promise.all([
+    E(lockAdditionalLpTokenSeat).getOfferResult(),
+    E(publicFacet).getBalanceByBrand('Liquidity', lpTokenIssuer),
+    E(notfierP).getUpdateSince(),
+  ]);
+
+  // The additional LP tokens locked should be equal to the total amount less the previously locked
+  const lockAdditionalLpTokenBalance = lockTotalLpTokenBalance.value - lockLpTokenBalance.value;
+
+  t.deepEqual(lockAdditionalLpTokensMessage, `LP Tokens locked in the value of ${additionalLpTokenAmount.value}`);
+  t.deepEqual(lockAdditionalLpTokenBalance, additionalLpTokenAmount.value); // Make sure the balance in the contract is as expected
+  t.deepEqual(notificationAfterAdditionalLPLock.phase, ALLOCATION_PHASE.ACTIVE);
+
 });
 
 test('Test remove Liquidity from AMM', async (t) => {
@@ -215,24 +353,24 @@ test('Test remove Liquidity from AMM', async (t) => {
 
   t.deepEqual(initialNotification.phase, ALLOCATION_PHASE.SCHEDULED);
 
-  const addLpTokensInvitation =
+  const lockLpTokensInvitation =
     E(creatorFacet).makeLockLPTokensInvitation();
   const proposal = harden({ give: { Liquidity: lpTokenAmount } });
   const paymentKeywordRecord = harden({ Liquidity: Liquidity });
 
-  const addLpTokenSeat = await E(zoe).offer(
-    addLpTokensInvitation,
+  const lockLpTokenSeat = await E(zoe).offer(
+    lockLpTokensInvitation,
     proposal,
     paymentKeywordRecord,
   );
-  const [addLpTokensMessage, addLpTokenBalance, { value: notificationAfterLPLock }] = await Promise.all([
-    E(addLpTokenSeat).getOfferResult(),
+  const [lockLpTokensMessage, lockLpTokenBalance, { value: notificationAfterLPLock }] = await Promise.all([
+    E(lockLpTokenSeat).getOfferResult(),
     E(publicFacet).getBalanceByBrand('Liquidity', lpTokenIssuer),
     E(notfierP).getUpdateSince(),
   ]);
 
-  t.deepEqual(addLpTokensMessage, `LP Tokens locked in the value of ${lpTokenAmount.value}`);
-  t.deepEqual(addLpTokenBalance, lpTokenAmount); // Make sure the balance in the contract is as expected
+  t.deepEqual(lockLpTokensMessage, `LP Tokens locked in the value of ${lpTokenAmount.value}`);
+  t.deepEqual(lockLpTokenBalance, lpTokenAmount); // Make sure the balance in the contract is as expected
   t.deepEqual(notificationAfterLPLock.phase, ALLOCATION_PHASE.ACTIVE);
 
   // remove Assets from AMM
@@ -336,24 +474,24 @@ test('trigger-lp-removal-price-moves-above-upper', async (t) => {
 
   t.deepEqual(initialNotification.phase, ALLOCATION_PHASE.SCHEDULED);
 
-  const addLpTokensInvitation =
+  const lockLpTokensInvitation =
     E(creatorFacet).makeLockLPTokensInvitation();
   const proposal = harden({ give: { Liquidity: lpTokenAmount } });
   const paymentKeywordRecord = harden({ Liquidity: Liquidity });
 
-  const addLpTokenSeat = await E(zoe).offer(
-    addLpTokensInvitation,
+  const lockLpTokenSeat = await E(zoe).offer(
+    lockLpTokensInvitation,
     proposal,
     paymentKeywordRecord,
   );
-  const [addLpTokensMessage, addLpTokenBalance, { value: notificationAfterLPLock }] = await Promise.all([
-    E(addLpTokenSeat).getOfferResult(),
+  const [lockLpTokensMessage, lockLpTokenBalance, { value: notificationAfterLPLock }] = await Promise.all([
+    E(lockLpTokenSeat).getOfferResult(),
     E(publicFacet).getBalanceByBrand('Liquidity', lpTokenIssuer),
     E(notifierP).getUpdateSince(),
   ]);
 
-  t.deepEqual(addLpTokensMessage, `LP Tokens locked in the value of ${lpTokenAmount.value}`);
-  t.deepEqual(addLpTokenBalance, lpTokenAmount); // Make sure the balance in the contract is as expected
+  t.deepEqual(lockLpTokensMessage, `LP Tokens locked in the value of ${lpTokenAmount.value}`);
+  t.deepEqual(lockLpTokenBalance, lpTokenAmount); // Make sure the balance in the contract is as expected
   t.deepEqual(notificationAfterLPLock.phase, ALLOCATION_PHASE.ACTIVE);
 
   console.log('Moving the price up...')
@@ -467,24 +605,24 @@ test('trigger-lp-removal-price-moves-below-lower', async (t) => {
 
   t.deepEqual(initialNotification.phase, ALLOCATION_PHASE.SCHEDULED);
 
-  const addLpTokensInvitation =
+  const lockLpTokensInvitation =
     E(creatorFacet).makeLockLPTokensInvitation();
   const proposal = harden({ give: { Liquidity: lpTokenAmount } });
   const paymentKeywordRecord = harden({ Liquidity: Liquidity });
 
-  const addLpTokenSeat = await E(zoe).offer(
-    addLpTokensInvitation,
+  const lockLpTokenSeat = await E(zoe).offer(
+    lockLpTokensInvitation,
     proposal,
     paymentKeywordRecord,
   );
-  const [addLpTokensMessage, addLpTokenBalance, { value: notificationAfterLPLock }] = await Promise.all([
-    E(addLpTokenSeat).getOfferResult(),
+  const [lockLpTokensMessage, lockLpTokenBalance, { value: notificationAfterLPLock }] = await Promise.all([
+    E(lockLpTokenSeat).getOfferResult(),
     E(publicFacet).getBalanceByBrand('Liquidity', lpTokenIssuer),
     E(notfierP).getUpdateSince(),
   ]);
 
-  t.deepEqual(addLpTokensMessage, `LP Tokens locked in the value of ${lpTokenAmount.value}`);
-  t.deepEqual(addLpTokenBalance, lpTokenAmount); // Make sure the balance in the contract is as expected
+  t.deepEqual(lockLpTokensMessage, `LP Tokens locked in the value of ${lpTokenAmount.value}`);
+  t.deepEqual(lockLpTokenBalance, lpTokenAmount); // Make sure the balance in the contract is as expected
   t.deepEqual(notificationAfterLPLock.phase, ALLOCATION_PHASE.ACTIVE);
 
   console.log('Moving the price up...');
@@ -597,24 +735,24 @@ test('update-boundaries-price-moves-below-old-lower-boundary', async (t) => {
 
   t.deepEqual(initialNotification.phase, ALLOCATION_PHASE.SCHEDULED);
 
-  const addLpTokensInvitation =
+  const lockLpTokensInvitation =
     E(creatorFacet).makeLockLPTokensInvitation();
   const proposal = harden({ give: { Liquidity: lpTokenAmount } });
   const paymentKeywordRecord = harden({ Liquidity: Liquidity });
 
-  const addLpTokenSeat = await E(zoe).offer(
-    addLpTokensInvitation,
+  const lockLpTokenSeat = await E(zoe).offer(
+    lockLpTokensInvitation,
     proposal,
     paymentKeywordRecord,
   );
-  const [addLpTokensMessage, addLpTokenBalance, { value: notificationAfterLPLock }] = await Promise.all([
-    E(addLpTokenSeat).getOfferResult(),
+  const [lockLpTokensMessage, lockLpTokenBalance, { value: notificationAfterLPLock }] = await Promise.all([
+    E(lockLpTokenSeat).getOfferResult(),
     E(publicFacet).getBalanceByBrand('Liquidity', lpTokenIssuer),
     E(notfierP).getUpdateSince(),
   ]);
 
-  t.deepEqual(addLpTokensMessage, `LP Tokens locked in the value of ${lpTokenAmount.value}`);
-  t.deepEqual(addLpTokenBalance, lpTokenAmount); // Make sure the balance in the contract is as expected
+  t.deepEqual(lockLpTokensMessage, `LP Tokens locked in the value of ${lpTokenAmount.value}`);
+  t.deepEqual(lockLpTokenBalance, lpTokenAmount); // Make sure the balance in the contract is as expected
   t.deepEqual(notificationAfterLPLock.phase, ALLOCATION_PHASE.ACTIVE);
 
   // Move upper boundary by 0,01 Secondary
@@ -743,24 +881,24 @@ test('update-boundaries-price-moves-above-old-upper-boundary', async (t) => {
 
   t.deepEqual(initialNotification.phase, ALLOCATION_PHASE.SCHEDULED);
 
-  const addLpTokensInvitation =
+  const lockLpTokensInvitation =
     E(creatorFacet).makeLockLPTokensInvitation();
   const proposal = harden({ give: { Liquidity: lpTokenAmount } });
   const paymentKeywordRecord = harden({ Liquidity: Liquidity });
 
-  const addLpTokenSeat = await E(zoe).offer(
-    addLpTokensInvitation,
+  const lockLpTokenSeat = await E(zoe).offer(
+    lockLpTokensInvitation,
     proposal,
     paymentKeywordRecord,
   );
-  const [addLpTokensMessage, addLpTokenBalance, { value: notificationAfterLPLock }] = await Promise.all([
-    E(addLpTokenSeat).getOfferResult(),
+  const [lockLpTokensMessage, lockLpTokenBalance, { value: notificationAfterLPLock }] = await Promise.all([
+    E(lockLpTokenSeat).getOfferResult(),
     E(publicFacet).getBalanceByBrand('Liquidity', lpTokenIssuer),
     E(notfierP).getUpdateSince(),
   ]);
 
-  t.deepEqual(addLpTokensMessage, `LP Tokens locked in the value of ${lpTokenAmount.value}`);
-  t.deepEqual(addLpTokenBalance, lpTokenAmount); // Make sure the balance in the contract is as expected
+  t.deepEqual(lockLpTokensMessage, `LP Tokens locked in the value of ${lpTokenAmount.value}`);
+  t.deepEqual(lockLpTokenBalance, lpTokenAmount); // Make sure the balance in the contract is as expected
   t.deepEqual(notificationAfterLPLock.phase, ALLOCATION_PHASE.ACTIVE);
 
   // Move upper boundary by 0,01 Secondary
@@ -891,24 +1029,24 @@ test('update-boundaries-price-moves-above-old-upper-then-new-upper', async (t) =
 
   t.deepEqual(initialNotification.phase, ALLOCATION_PHASE.SCHEDULED);
 
-  const addLpTokensInvitation =
+  const lockLpTokensInvitation =
     E(creatorFacet).makeLockLPTokensInvitation();
   const proposal = harden({ give: { Liquidity: lpTokenAmount } });
   const paymentKeywordRecord = harden({ Liquidity: Liquidity });
 
-  const addLpTokenSeat = await E(zoe).offer(
-    addLpTokensInvitation,
+  const lockLpTokenSeat = await E(zoe).offer(
+    lockLpTokensInvitation,
     proposal,
     paymentKeywordRecord,
   );
-  const [addLpTokensMessage, addLpTokenBalance, { value: notificationAfterLPLock }] = await Promise.all([
-    E(addLpTokenSeat).getOfferResult(),
+  const [lockLpTokensMessage, lockLpTokenBalance, { value: notificationAfterLPLock }] = await Promise.all([
+    E(lockLpTokenSeat).getOfferResult(),
     E(publicFacet).getBalanceByBrand('Liquidity', lpTokenIssuer),
     E(notfierP).getUpdateSince(),
   ]);
 
-  t.deepEqual(addLpTokensMessage, `LP Tokens locked in the value of ${lpTokenAmount.value}`);
-  t.deepEqual(addLpTokenBalance, lpTokenAmount); // Make sure the balance in the contract is as expected
+  t.deepEqual(lockLpTokensMessage, `LP Tokens locked in the value of ${lpTokenAmount.value}`);
+  t.deepEqual(lockLpTokenBalance, lpTokenAmount); // Make sure the balance in the contract is as expected
   t.deepEqual(notificationAfterLPLock.phase, ALLOCATION_PHASE.ACTIVE);
 
   // Move upper boundary by 0,01 Secondary
@@ -1074,24 +1212,24 @@ test('update-boundaries-price-moves-below-old-lower-then-new-lower', async (t) =
 
   t.deepEqual(initialNotification.phase, ALLOCATION_PHASE.SCHEDULED);
 
-  const addLpTokensInvitation =
+  const lockLpTokensInvitation =
     E(creatorFacet).makeLockLPTokensInvitation();
   const proposal = harden({ give: { Liquidity: lpTokenAmount } });
   const paymentKeywordRecord = harden({ Liquidity: Liquidity });
 
-  const addLpTokenSeat = await E(zoe).offer(
-    addLpTokensInvitation,
+  const lockLpTokenSeat = await E(zoe).offer(
+    lockLpTokensInvitation,
     proposal,
     paymentKeywordRecord,
   );
-  const [addLpTokensMessage, addLpTokenBalance, { value: notificationAfterLPLock }] = await Promise.all([
-    E(addLpTokenSeat).getOfferResult(),
+  const [lockLpTokensMessage, lockLpTokenBalance, { value: notificationAfterLPLock }] = await Promise.all([
+    E(lockLpTokenSeat).getOfferResult(),
     E(publicFacet).getBalanceByBrand('Liquidity', lpTokenIssuer),
     E(notfierP).getUpdateSince(),
   ]);
 
-  t.deepEqual(addLpTokensMessage, `LP Tokens locked in the value of ${lpTokenAmount.value}`);
-  t.deepEqual(addLpTokenBalance, lpTokenAmount); // Make sure the balance in the contract is as expected
+  t.deepEqual(lockLpTokensMessage, `LP Tokens locked in the value of ${lpTokenAmount.value}`);
+  t.deepEqual(lockLpTokenBalance, lpTokenAmount); // Make sure the balance in the contract is as expected
   t.deepEqual(notificationAfterLPLock.phase, ALLOCATION_PHASE.ACTIVE);
 
   // Move upper boundary by 0,01 Secondary
@@ -1257,24 +1395,24 @@ test('update-boundaries-price-moves-below-old-lower-then-new-upper', async (t) =
 
   t.deepEqual(initialNotification.phase, ALLOCATION_PHASE.SCHEDULED);
 
-  const addLpTokensInvitation =
+  const lockLpTokensInvitation =
     E(creatorFacet).makeLockLPTokensInvitation();
   const proposal = harden({ give: { Liquidity: lpTokenAmount } });
   const paymentKeywordRecord = harden({ Liquidity: Liquidity });
 
-  const addLpTokenSeat = await E(zoe).offer(
-    addLpTokensInvitation,
+  const lockLpTokenSeat = await E(zoe).offer(
+    lockLpTokensInvitation,
     proposal,
     paymentKeywordRecord,
   );
-  const [addLpTokensMessage, addLpTokenBalance, { value: notificationAfterLPLock }] = await Promise.all([
-    E(addLpTokenSeat).getOfferResult(),
+  const [lockLpTokensMessage, lockLpTokenBalance, { value: notificationAfterLPLock }] = await Promise.all([
+    E(lockLpTokenSeat).getOfferResult(),
     E(publicFacet).getBalanceByBrand('Liquidity', lpTokenIssuer),
     E(notfierP).getUpdateSince(),
   ]);
 
-  t.deepEqual(addLpTokensMessage, `LP Tokens locked in the value of ${lpTokenAmount.value}`);
-  t.deepEqual(addLpTokenBalance, lpTokenAmount); // Make sure the balance in the contract is as expected
+  t.deepEqual(lockLpTokensMessage, `LP Tokens locked in the value of ${lpTokenAmount.value}`);
+  t.deepEqual(lockLpTokenBalance, lpTokenAmount); // Make sure the balance in the contract is as expected
   t.deepEqual(notificationAfterLPLock.phase, ALLOCATION_PHASE.ACTIVE);
 
   // Move upper boundary by 0,01 Secondary
@@ -1548,24 +1686,24 @@ test('Test withdraw Liquidity', async (t) => {
 
   t.deepEqual(initialNotification.phase, ALLOCATION_PHASE.SCHEDULED);
 
-  const addLpTokensInvitation =
+  const lockLpTokensInvitation =
     E(creatorFacet).makeLockLPTokensInvitation();
   const proposal = harden({ give: { Liquidity: lpTokenAmount } });
   const paymentKeywordRecord = harden({ Liquidity: Liquidity });
 
-  const addLpTokenSeat = await E(zoe).offer(
-    addLpTokensInvitation,
+  const lockLpTokenSeat = await E(zoe).offer(
+    lockLpTokensInvitation,
     proposal,
     paymentKeywordRecord,
   );
-  const [addLpTokensMessage, addLpTokenBalance, { value: notificationAfterLPLock }] = await Promise.all([
-    E(addLpTokenSeat).getOfferResult(),
+  const [lockLpTokensMessage, lockLpTokenBalance, { value: notificationAfterLPLock }] = await Promise.all([
+    E(lockLpTokenSeat).getOfferResult(),
     E(publicFacet).getBalanceByBrand('Liquidity', lpTokenIssuer),
     E(notfierP).getUpdateSince(),
   ]);
 
-  t.deepEqual(addLpTokensMessage, `LP Tokens locked in the value of ${lpTokenAmount.value}`);
-  t.deepEqual(addLpTokenBalance, lpTokenAmount); // Make sure the balance in the contract is as expected
+  t.deepEqual(lockLpTokensMessage, `LP Tokens locked in the value of ${lpTokenAmount.value}`);
+  t.deepEqual(lockLpTokenBalance, lpTokenAmount); // Make sure the balance in the contract is as expected
   t.deepEqual(notificationAfterLPLock.phase, ALLOCATION_PHASE.ACTIVE);
 
   // remove Assets from AMM
@@ -1704,24 +1842,24 @@ test('Test withdraw LP Tokens while having tokens locked', async (t) => {
 
   t.deepEqual(initialNotification.phase, ALLOCATION_PHASE.SCHEDULED);
 
-  const addLpTokensInvitation =
+  const lockLpTokensInvitation =
     E(creatorFacet).makeLockLPTokensInvitation();
   const proposal = harden({ give: { Liquidity: lpTokenAmount } });
   const paymentKeywordRecord = harden({ Liquidity: Liquidity });
 
-  const addLpTokenSeat = await E(zoe).offer(
-    addLpTokensInvitation,
+  const lockLpTokenSeat = await E(zoe).offer(
+    lockLpTokensInvitation,
     proposal,
     paymentKeywordRecord,
   );
-  const [addLpTokensMessage, addLpTokenBalance, { value: notificationAfterLPLock }] = await Promise.all([
-    E(addLpTokenSeat).getOfferResult(),
+  const [lockLpTokensMessage, lockLpTokenBalance, { value: notificationAfterLPLock }] = await Promise.all([
+    E(lockLpTokenSeat).getOfferResult(),
     E(publicFacet).getBalanceByBrand('Liquidity', lpTokenIssuer),
     E(notfierP).getUpdateSince(),
   ]);
 
-  t.deepEqual(addLpTokensMessage, `LP Tokens locked in the value of ${lpTokenAmount.value}`);
-  t.deepEqual(addLpTokenBalance, lpTokenAmount); // Make sure the balance in the contract is as expected
+  t.deepEqual(lockLpTokensMessage, `LP Tokens locked in the value of ${lpTokenAmount.value}`);
+  t.deepEqual(lockLpTokenBalance, lpTokenAmount); // Make sure the balance in the contract is as expected
   t.deepEqual(notificationAfterLPLock.phase, ALLOCATION_PHASE.ACTIVE);
 
   const lpTokenBrand = await E(lpTokenIssuer).getBrand();

@@ -43,6 +43,5 @@ export const assertExecutionMode = (ammPublicFacet, devPriceAuthority) => {
 };
 
 export const assertAllocationStatePhase = (phaseSnapshot, phase) => {
-  console.log("LOG = ", phaseSnapshot)
   assert(phaseSnapshot === phase, X`AllocationState phase should be: ${phase}`);
 };
