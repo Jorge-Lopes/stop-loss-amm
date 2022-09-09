@@ -25,7 +25,7 @@ const start = async (zcf) => {
     /** @type XYKAMMPublicFacet */  ammPublicFacet,
     /** @type Issuer */ centralIssuer,
     /** @type Issuer */ secondaryIssuer,
-    /** @type Issuer */ liquidityIssuer,
+    /** @type Issuer */ lpTokenIssuer,
     boundaries,
     /** @type PriceAuthority */ devPriceAuthority = undefined,
   } = zcf.getTerms();
@@ -36,7 +36,7 @@ const start = async (zcf) => {
 
   const centralBrand = zcf.getBrandForIssuer(centralIssuer);
   const secondaryBrand = zcf.getBrandForIssuer(secondaryIssuer);
-  const lpTokenBrand = zcf.getBrandForIssuer(liquidityIssuer);
+  const lpTokenBrand = zcf.getBrandForIssuer(lpTokenIssuer);
 
   const getStateSnapshot = phase => {
     return harden({
@@ -117,11 +117,11 @@ const start = async (zcf) => {
       });
 
       const {
-        give: { Liquidity: liquidityAmount },
+        give: { Liquidity: lpTokenAmount },
       } = creatorSeat.getProposal();
 
       stopLossSeat.incrementBy(
-        creatorSeat.decrementBy(harden({ Liquidity: liquidityAmount })),
+        creatorSeat.decrementBy(harden({ Liquidity: lpTokenAmount })),
       );
 
       zcf.reallocate(stopLossSeat, creatorSeat);
@@ -130,7 +130,7 @@ const start = async (zcf) => {
 
       updateAllocationState(ALLOCATION_PHASE.ACTIVE);
 
-      return `Liquidity locked in the value of ${liquidityAmount.value}`;
+      return `LP Tokens locked in the value of ${lpTokenAmount.value}`;
     };
 
     return zcf.makeInvitation(

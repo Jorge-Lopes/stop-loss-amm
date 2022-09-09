@@ -20,7 +20,7 @@ import { AmountMath } from '@agoric/ertp';
  * @param {GovernedPublicFacet<XYKAMMPublicFacet>} ammPublicFacet
  * @param {{ mint: Mint; issuer: Issuer; brand: Brand; displayInfo: DisplayInfo }} secondaryR
  * @param {{ mint: Mint; issuer: Issuer; brand: Brand; displayInfo: DisplayInfo }} centralR
- * @param {*} liquidityIssuer
+ * @param {*} lpTokenIssuer
  * @returns
  */
 export const makeLiquidityInvitations = async (
@@ -28,13 +28,13 @@ export const makeLiquidityInvitations = async (
   ammPublicFacet,
   secondaryR,
   centralR,
-  liquidityIssuer,
+  lpTokenIssuer,
 ) => {
   const makeCentral = (value) => AmountMath.make(centralR.brand, value * 10n ** BigInt(centralR.displayInfo.decimalPlaces));
   const makeSecondary = (value) => AmountMath.make(secondaryR.brand, value * 10n ** BigInt(secondaryR.displayInfo.decimalPlaces));
-  const liquidityBrand = await E(liquidityIssuer).getBrand();
-  const liquidityAmounth = (value) =>
-    AmountMath.make(liquidityBrand, value);
+  const lpTokenBrand = await E(lpTokenIssuer).getBrand();
+  const lpTokenAmount = (value) =>
+    AmountMath.make(lpTokenBrand, value);
 
   const addLiquidity = async (secondary, central) => {
     const addLiquidityInvitation = E(
@@ -47,7 +47,7 @@ export const makeLiquidityInvitations = async (
     const centralPayment = centralR.mint.mintPayment(makeCentral(central));
 
     const proposal = harden({
-      want: { Liquidity: liquidityAmounth(1000n) },
+      want: { Liquidity: lpTokenAmount(1000n) },
       give: {
         Secondary: makeSecondary(secondary),
         Central: makeCentral(central),
@@ -72,7 +72,7 @@ export const makeLiquidityInvitations = async (
       ammPublicFacet,
     ).makeRemoveLiquidityInvitation();
 
-    const emptyLiquidity = liquidityAmounth(liquidity);
+    const emptyLiquidity = lpTokenAmount(liquidity);
     const proposal = harden({
       give: { Liquidity: emptyLiquidity },
       want: {
