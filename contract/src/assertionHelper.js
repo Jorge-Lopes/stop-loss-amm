@@ -42,7 +42,7 @@ export const assertExecutionMode = (ammPublicFacet, devPriceAuthority) => {
     X`You can either run this contract with a ammPublicFacet for prod mode or with a priceAuthority for dev mode`);
 };
 
-export const assertAllocationStatePhase = async (notifier, phase) => {
-  const {value: allocationState} = await E(notifier).getUpdateSince();
-  assert(allocationState.phase === phase, X`AllocationState phase should be: ${phase}`);
+export const assertAllocationStatePhase = (phaseSnapshot, phase) => {
+  console.log("LOG = ", phaseSnapshot)
+  assert(phaseSnapshot === phase, X`AllocationState phase should be: ${phase}`);
 };

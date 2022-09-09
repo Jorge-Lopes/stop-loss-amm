@@ -52,9 +52,12 @@ const start = async (zcf) => {
 
   const { updater, notifier } = makeNotifierKit(getStateSnapshot(ALLOCATION_PHASE.IDLE));
 
+  let phaseSnapshot = ALLOCATION_PHASE.IDLE;
+
   const updateAllocationState = (allocationPhase) => {
     const allocationState = getStateSnapshot(allocationPhase);
     updater.updateState(allocationState);
+    phaseSnapshot = allocationPhase;
   }
 
   assertBoundaryShape(boundaries, centralBrand, secondaryBrand);
@@ -112,12 +115,12 @@ const start = async (zcf) => {
   }); // Notify user
 
   const makeLockLPTokensInvitation = () => {
-    const lockLPTokens = async (creatorSeat) => {
+    const lockLPTokens = (creatorSeat) => {
       assertProposalShape(creatorSeat, {
         give: { Liquidity: null },
       });
 
-      await assertAllocationStatePhase(notifier, ALLOCATION_PHASE.SCHEDULED);
+      assertAllocationStatePhase(phaseSnapshot, ALLOCATION_PHASE.SCHEDULED);
 
       const {
         give: { Liquidity: lpTokenAmount },
@@ -178,14 +181,14 @@ const start = async (zcf) => {
   };
 
   const makeWithdrawLiquidityInvitation = () => {
-    const withdrawLiquidity = async (creatorSeat) => {
+    const withdrawLiquidity = (creatorSeat) => {
       assertProposalShape(creatorSeat, {
         want: {
           Central: null,
           Secondary: null,
         },
       });
-      await assertAllocationStatePhase(notifier, ALLOCATION_PHASE.REMOVED);
+      assertAllocationStatePhase(phaseSnapshot, ALLOCATION_PHASE.REMOVED);
 
       const centralAmountAllocated = stopLossSeat.getAmountAllocated(
         'Central',
@@ -218,12 +221,12 @@ const start = async (zcf) => {
   };
 
   const makeWithdrawLpTokensInvitation = () => {
-    const withdrawLpTokens = async (creatorSeat) => {
+    const withdrawLpTokens = (creatorSeat) => {
       assertProposalShape(creatorSeat, {
         want: {Liquidity: null},
       });
 
-      await assertAllocationStatePhase(notifier, ALLOCATION_PHASE.ACTIVE);
+      assertAllocationStatePhase(phaseSnapshot, ALLOCATION_PHASE.ACTIVE);
 
       const lpTokenAmountAllocated = stopLossSeat.getAmountAllocated(
         'Liquidity',

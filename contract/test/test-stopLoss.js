@@ -1603,12 +1603,17 @@ test('Test withdraw Liquidity', async (t) => {
     withdrawProposal,
   );
 
+  const [withdrawLiquidityMessage, withdrawSeatAllocation] = await Promise.all([
+    E(withdrawSeat).getOfferResult(),
+    E(withdrawSeat).getCurrentAllocation(),
+  ]); 
 
-
-  // Check Offer result
-  const withdrawLiquidityMessage = await E(withdrawSeat).getOfferResult();
+  // Check Offer result and creator seat allocation
   t.deepEqual(withdrawLiquidityMessage, 'Liquidity withdraw to creator seat');
+  t.deepEqual(withdrawSeatAllocation.Central, centralInUnit(30n));
+  t.deepEqual(withdrawSeatAllocation.Secondary, secondaryInUnit(60n))
 
+ 
   const [withdrawCentralBalance, withdrawSecondaryBalance, withdrawLiquidityBalance,  { value: notificationAfterWithdraw }] = await Promise.all([
     E(publicFacet).getBalanceByBrand('Central', centralIssuer),
     E(publicFacet).getBalanceByBrand('Secondary', secondaryIssuer),
@@ -1622,10 +1627,6 @@ test('Test withdraw Liquidity', async (t) => {
     t.deepEqual(notificationAfterWithdraw.liquidityBalance.central, withdrawCentralBalance);
     t.deepEqual(notificationAfterWithdraw.liquidityBalance.secondary, withdrawSecondaryBalance);
 
-  // Check creator seat allocation
-  const withdrawSeatAllocation = await E(withdrawSeat).getCurrentAllocation();
-  t.deepEqual(withdrawSeatAllocation.Central, centralInUnit(30n));
-  t.deepEqual(withdrawSeatAllocation.Secondary, secondaryInUnit(60n))
 });
 
 test('Test withdraw LP Tokens while having tokens locked', async (t) => {
@@ -1733,8 +1734,14 @@ test('Test withdraw LP Tokens while having tokens locked', async (t) => {
     withdrawProposal,
   );
 
-  const withdrawLpTokenMessage = await E(withdrawLpSeat).getOfferResult();
+  const [withdrawLpTokenMessage, withdrawLpSeatAllocation] = await Promise.all([
+    E(withdrawLpSeat).getOfferResult(),
+    E(withdrawLpSeat).getCurrentAllocation(),
+  ]); 
+
+  // Check Offer result and creator seat allocation
   t.deepEqual(withdrawLpTokenMessage, 'LP Tokens withdraw to creator seat');
+  t.deepEqual(withdrawLpSeatAllocation.Liquidity.value, 3000000000n);
 
   const [ withdrawLiquidityBalance,  { value: notificationAfterWithdraw }] = await Promise.all([
     E(publicFacet).getBalanceByBrand('Liquidity', lpTokenIssuer),
@@ -1745,8 +1752,8 @@ test('Test withdraw LP Tokens while having tokens locked', async (t) => {
   t.deepEqual(notificationAfterWithdraw.phase, ALLOCATION_PHASE.WITHDRAWN);
   t.deepEqual(notificationAfterWithdraw.lpBalance, withdrawLiquidityBalance);
 
-  // Check creator seat
-  const withdrawLpSeatAllocation = await E(withdrawLpSeat).getCurrentAllocation();
-  t.deepEqual(withdrawLpSeatAllocation.Liquidity.value, 3000000000n);
+
+
+
   
 });
