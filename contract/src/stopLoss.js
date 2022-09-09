@@ -8,11 +8,12 @@ import {
 import { Far, E } from '@endo/far';
 import { AmountMath } from '@agoric/ertp';
 import { offerTo } from '@agoric/zoe/src/contractSupport/index.js';
-import { assertBoundaryShape, assertExecutionMode } from './assertionHelper.js';
+import { assertBoundaryShape, assertExecutionMode, assertAllocationStatePhase } from './assertionHelper.js';
 import { makeBoundaryWatcher } from './boundaryWatcher.js';
 import { makeNotifierKit } from '@agoric/notifier';
 import { ALLOCATION_PHASE, BOUNDARY_WATCHER_STATUS } from './constants.js';
 import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
+
 
 const tracer = makeTracer('StopLoss');
 
@@ -215,6 +216,37 @@ const start = async (zcf) => {
     return zcf.makeInvitation(withdrawLiquidity, 'withdraw Liquidity');
   };
 
+  const makeWithdrawLpTokensInvitation = () => {
+    const withdrawLpTokens = async (creatorSeat) => {
+      assertProposalShape(creatorSeat, {
+        want: {Liquidity: null},
+      });
+
+      await assertAllocationStatePhase(notifier, ALLOCATION_PHASE.ACTIVE);
+
+      const lpTokenAmountAllocated = stopLossSeat.getAmountAllocated(
+        'Liquidity',
+        lpTokenBrand,
+      )
+
+      creatorSeat.incrementBy(
+        stopLossSeat.decrementBy(
+          harden({Liquidity: lpTokenAmountAllocated}),
+        ),
+      );
+
+      zcf.reallocate(creatorSeat, stopLossSeat);
+
+      creatorSeat.exit();
+
+      updateAllocationState(ALLOCATION_PHASE.WITHDRAWN);
+
+      return `LP Tokens withdraw to creator seat`;
+    };
+
+    return zcf.makeInvitation(withdrawLpTokens, 'withdraw Lp Tokens');
+  };
+
   const updateConfiguration = async boundaries => {
     return await updateBoundaries(boundaries);
   };
@@ -234,6 +266,7 @@ const start = async (zcf) => {
   const creatorFacet = Far('creator facet', {
     makeLockLPTokensInvitation,
     makeWithdrawLiquidityInvitation,
+    makeWithdrawLpTokensInvitation,
     removeLiquidityFromAmm,
     updateConfiguration,
     getNotifier: () => notifier,
