@@ -52,6 +52,7 @@ const start = async (zcf) => {
 
   const { updater, notifier } = makeNotifierKit(getStateSnapshot(ALLOCATION_PHASE.IDLE));
 
+  // phaseSnapshot used for assertAllocationStatePhase
   let phaseSnapshot = ALLOCATION_PHASE.IDLE;
 
   const updateAllocationState = (allocationPhase) => {
@@ -120,7 +121,13 @@ const start = async (zcf) => {
         give: { Liquidity: null },
       });
 
-      assertAllocationStatePhase(phaseSnapshot, ALLOCATION_PHASE.SCHEDULED);
+      //TODO: refractor the next condition
+      const lpBalance = getBalanceByBrand('Liquidity', lpTokenIssuer).value;
+      if (lpBalance === 0n) {
+        assertAllocationStatePhase(phaseSnapshot, ALLOCATION_PHASE.SCHEDULED);
+      } else {
+        assertAllocationStatePhase(phaseSnapshot, ALLOCATION_PHASE.ACTIVE);
+      }
 
       const {
         give: { Liquidity: lpTokenAmount },
