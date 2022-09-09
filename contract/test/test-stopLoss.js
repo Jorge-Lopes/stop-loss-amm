@@ -1,8 +1,8 @@
 // @ts-check
 
 import { test } from '@agoric/zoe/tools/prepare-test-env-ava.js';
-import { unsafeMakeBundleCache } from '@agoric/run-protocol/test/bundleTool.js';
-import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
+import { unsafeMakeBundleCache } from '@agoric/swingset-vat/tools/bundleTool.js';
+import { makeTracer } from '@agoric/inter-protocol/src/makeTracer.js';
 import {
   addLiquidityToPool,
   startAmmPool,
@@ -13,7 +13,7 @@ import {
 } from './helper.js';
 import { E } from '@endo/far';
 import { makeRatioFromAmounts } from '@agoric/zoe/src/contractSupport/ratio.js';
-import { waitForPromisesToSettle } from '@agoric/run-protocol/test/supports.js';
+import { eventLoopIteration } from '@agoric/zoe/tools/eventLoopIteration.js';
 import { AmountMath } from '@agoric/ertp';
 import { ALLOCATION_PHASE, UPDATED_BOUNDARY_MESSAGE } from '../src/constants.js';
 import { makeManualPriceAuthority } from '@agoric/zoe/tools/manualPriceAuthority.js';
@@ -363,7 +363,7 @@ test('trigger-lp-removal-price-moves-above-upper', async (t) => {
 
   trace('Input price after', inputPriceAfter);
 
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const [liquidityAmountAllocated, liquidityBrand, centralAmountAllocated, secondaryAmountAllocated, { value: notificationAfterPriceAboveUpper }] = await Promise.all([
     E(publicFacet).getBalanceByBrand('Liquidity', liquidityIssuer),
@@ -493,7 +493,7 @@ test('trigger-lp-removal-price-moves-below-lower', async (t) => {
   console.log('Done.');
   trace('InputPriceAfter', inputPriceAfter);
 
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const [liquidityAmountAllocated, liquidityBrand, centralAmountAllocated, secondaryAmountAllocated, { value: notificationAfterPriceExceedsLimit }] = await Promise.all([
     E(publicFacet).getBalanceByBrand('Liquidity', liquidityIssuer),
@@ -640,7 +640,7 @@ test('update-boundaries-price-moves-below-old-lower-boundary', async (t) => {
   t.truthy(AmountMath.isGTE(boundaries.lower.numerator, inputPriceAfter));
   t.truthy(AmountMath.isGTE(inputPriceAfter, newBoundaries.lower.numerator));
 
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const [liquidityAmountAllocated, centralAmountAllocated, secondaryAmountAllocated, { value: notificationAfterPriceExceedsLimit }] = await Promise.all([
     E(publicFacet).getBalanceByBrand('Liquidity', liquidityIssuer),
@@ -788,7 +788,7 @@ test('update-boundaries-price-moves-above-old-upper-boundary', async (t) => {
   t.truthy(AmountMath.isGTE(inputPriceAfter, boundaries.upper.numerator));
   t.truthy(AmountMath.isGTE(newBoundaries.upper.numerator, inputPriceAfter));
 
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const [liquidityAmountAllocated, centralAmountAllocated, secondaryAmountAllocated, { value: notificationAfterPriceExceedsLimit }] = await Promise.all([
     E(publicFacet).getBalanceByBrand('Liquidity', liquidityIssuer),
@@ -934,7 +934,7 @@ test('update-boundaries-price-moves-above-old-upper-then-new-upper', async (t) =
   t.truthy(AmountMath.isGTE(newBoundaries.upper.numerator, inputPriceAfter));
   t.truthy(AmountMath.isGTE(inputPriceAfter, boundaries.upper.numerator));
 
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const [liquidityAmountAllocated, centralAmountAllocated, secondaryAmountAllocated, { value: notificationAfterPriceExceedsOldLimit }] =
     await Promise.all([
@@ -967,7 +967,7 @@ test('update-boundaries-price-moves-above-old-upper-then-new-upper', async (t) =
   console.log('Done.');
   trace('inputPriceAfterBoundariesUpdated', inputPriceAfterBoundariesUpdated);
 
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const [
     liquidityAmountAllocatedAfterUpdate,
@@ -1117,7 +1117,7 @@ test('update-boundaries-price-moves-below-old-lower-then-new-lower', async (t) =
   t.truthy(AmountMath.isGTE(boundaries.lower.numerator, inputPriceAfter));
   t.truthy(AmountMath.isGTE(inputPriceAfter, newBoundaries.lower.numerator));
 
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const [liquidityAmountAllocated, centralAmountAllocated, secondaryAmountAllocated, { value: notificationAfterPriceExceedsOldLimit }] =
     await Promise.all([
@@ -1150,7 +1150,7 @@ test('update-boundaries-price-moves-below-old-lower-then-new-lower', async (t) =
   console.log('Done.');
   trace('inputPriceAfterBoundariesUpdated', inputPriceAfterBoundariesUpdated);
 
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const [
     liquidityAmountAllocatedAfterUpdate,
@@ -1300,7 +1300,7 @@ test('update-boundaries-price-moves-below-old-lower-then-new-upper', async (t) =
   t.truthy(AmountMath.isGTE(boundaries.lower.numerator, inputPriceAfter));
   t.truthy(AmountMath.isGTE(inputPriceAfter, newBoundaries.lower.numerator));
 
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const [liquidityAmountAllocated, centralAmountAllocated, secondaryAmountAllocated, { value: notificationAfterPriceExceedsOldLimit }] =
     await Promise.all([
@@ -1333,7 +1333,7 @@ test('update-boundaries-price-moves-below-old-lower-then-new-upper', async (t) =
   console.log('Done.');
   trace('inputPriceAfterBoundariesUpdated', inputPriceAfterBoundariesUpdated);
 
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const [
     liquidityAmountAllocatedAfterUpdate,
@@ -1601,7 +1601,7 @@ test('boundaryWatcher-failed-no-tokens-locked', async (t) => {
   t.deepEqual(initialNotification.phase, ALLOCATION_PHASE.SCHEDULED);
 
   E(devPriceAuthority).setPrice(undefined);
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const [liquidityAmountAllocated, liquidityBrand, centralAmountAllocated, secondaryAmountAllocated, { value: notificationAfterBadPrice }] = await Promise.all([
     E(publicFacet).getBalanceByBrand('Liquidity', liquidityIssuer),

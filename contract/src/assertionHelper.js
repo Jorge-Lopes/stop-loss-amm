@@ -1,6 +1,6 @@
 import { assert, details as X } from '@agoric/assert';
 import { assertIsRatio } from '@agoric/zoe/src/contractSupport/ratio.js';
-import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
+import { makeTracer } from '@agoric/inter-protocol/src/makeTracer.js';
 
 const tracer = makeTracer('assertionHelper');
 

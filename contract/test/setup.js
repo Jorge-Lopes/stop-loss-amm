@@ -8,15 +8,15 @@ import {
   makeAgoricNamesAccess,
   makePromiseSpace,
 } from '@agoric/vats/src/core/utils.js';
-import * as Collect from '@agoric/run-protocol/src/collect.js';
+import * as Collect from '@agoric/inter-protocol/src/collect.js';
 import {
   setupAmm,
   startEconomicCommittee,
-} from '@agoric/run-protocol/src/econ-behaviors.js';
+} from '@agoric/inter-protocol/src/proposals/econ-behaviors.js';
 import {
   installGovernance,
   provideBundle,
-} from '@agoric/run-protocol/test/supports.js';
+} from '@agoric/inter-protocol/test/supports.js';
 import bundleSource from "@endo/bundle-source";
 import { resolve as importMetaResolve } from 'import-meta-resolve';
 
@@ -30,7 +30,7 @@ import { resolve as importMetaResolve } from 'import-meta-resolve';
 */
 
 const ammRoot =
-  '@agoric/run-protocol/src/vpool-xyk-amm/multipoolMarketMaker.js'; // package relative
+  '@agoric/inter-protocol/src/vpool-xyk-amm/multipoolMarketMaker.js'; // package relative
 
 const stopLossRoot =
   '../src/stopLoss.js'
