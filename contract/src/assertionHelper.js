@@ -1,6 +1,7 @@
 import { assert, details as X } from '@agoric/assert';
 import { assertIsRatio } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
+import { E } from '@endo/eventual-send';
 
 const tracer = makeTracer('assertionHelper');
 
@@ -39,4 +40,9 @@ export const assertExecutionMode = (ammPublicFacet, devPriceAuthority) => {
   tracer('assertExecutionMode', { ammPublicFacet, devPriceAuthority });
   assert(checkExecutionModeValid(),
     X`You can either run this contract with a ammPublicFacet for prod mode or with a priceAuthority for dev mode`);
+};
+
+export const assertAllocationStatePhase = (phaseSnapshot, phase) => {
+  console.log("LOG = ", phaseSnapshot)
+  assert(phaseSnapshot === phase, X`AllocationState phase should be: ${phase}`);
 };
