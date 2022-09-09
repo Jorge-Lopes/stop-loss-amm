@@ -152,49 +152,16 @@ const start = async (zcf) => {
     );
   };
 
-  const removeLiquidityFromAmm = async () => {
-    const removeLiquidityInvitation =
-      E(ammPublicFacet).makeRemoveLiquidityInvitation();
-
-    const liquidityIn = stopLossSeat.getAmountAllocated(
-      'Liquidity',
-      lpTokenBrand,
-    );
-
-    const proposal = harden({
-      want: {
-        Central: AmountMath.makeEmpty(centralBrand),
-        Secondary: AmountMath.makeEmpty(secondaryBrand),
-      },
-      give: {
-        Liquidity: liquidityIn,
-      },
-    });
-
-    const { deposited, userSeatPromise: liquiditySeat } = await offerTo(
-      zcf,
-      removeLiquidityInvitation,
-      undefined,
-      proposal,
-      stopLossSeat,
-    );
-
-    const [amounts, removeOfferResult] = await Promise.all([deposited, E(liquiditySeat).getOfferResult()]);
-    tracer('Amounts from removal', amounts);
-
-    updateAllocationState(ALLOCATION_PHASE.REMOVED);
-
-    return removeOfferResult;
-  };
-
   const makeWithdrawLiquidityInvitation = () => {
-    const withdrawLiquidity = (creatorSeat) => {
+    const withdrawLiquidity = async (creatorSeat) => {
       assertProposalShape(creatorSeat, {
         want: {
           Central: null,
           Secondary: null,
         },
       });
+      
+      await removeLiquidityFromAmm();
       assertAllocationStatePhase(phaseSnapshot, ALLOCATION_PHASE.REMOVED);
 
       const centralAmountAllocated = stopLossSeat.getAmountAllocated(
@@ -258,6 +225,41 @@ const start = async (zcf) => {
     return zcf.makeInvitation(withdrawLpTokens, 'withdraw Lp Tokens');
   };
 
+  const removeLiquidityFromAmm = async () => {
+    const removeLiquidityInvitation =
+      E(ammPublicFacet).makeRemoveLiquidityInvitation();
+
+    const liquidityIn = stopLossSeat.getAmountAllocated(
+      'Liquidity',
+      lpTokenBrand,
+    );
+
+    const proposal = harden({
+      want: {
+        Central: AmountMath.makeEmpty(centralBrand),
+        Secondary: AmountMath.makeEmpty(secondaryBrand),
+      },
+      give: {
+        Liquidity: liquidityIn,
+      },
+    });
+
+    const { deposited, userSeatPromise: liquiditySeat } = await offerTo(
+      zcf,
+      removeLiquidityInvitation,
+      undefined,
+      proposal,
+      stopLossSeat,
+    );
+
+    const [amounts, removeOfferResult] = await Promise.all([deposited, E(liquiditySeat).getOfferResult()]);
+    tracer('Amounts from removal', amounts);
+
+    updateAllocationState(ALLOCATION_PHASE.REMOVED);
+
+    return removeOfferResult;
+  };
+
   const updateConfiguration = async boundaries => {
     return await updateBoundaries(boundaries);
   };
@@ -278,7 +280,6 @@ const start = async (zcf) => {
     makeLockLPTokensInvitation,
     makeWithdrawLiquidityInvitation,
     makeWithdrawLpTokensInvitation,
-    removeLiquidityFromAmm,
     updateConfiguration,
     getNotifier: () => notifier,
   });
