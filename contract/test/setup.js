@@ -12,6 +12,7 @@ import * as Collect from '@agoric/inter-protocol/src/collect.js';
 import {
   setupAmm,
   startEconomicCommittee,
+  setupReserve,
 } from '@agoric/inter-protocol/src/proposals/econ-behaviors.js';
 import {
   installGovernance,
@@ -19,6 +20,7 @@ import {
 } from '@agoric/inter-protocol/test/supports.js';
 import bundleSource from "@endo/bundle-source";
 import { resolve as importMetaResolve } from 'import-meta-resolve';
+import { setupAMMBootstrap, setUpZoeForTest } from '@agoric/inter-protocol/test/amm/vpool-xyk-amm/setup.js'
 
 /*
   Code imported from: @agoric/run-protocol/test/amm/vpool-xyk-amm/setup.js
@@ -29,52 +31,11 @@ import { resolve as importMetaResolve } from 'import-meta-resolve';
     setup an amm instance, exporting the public and contructor facet for testing purposes;
 */
 
-const ammRoot =
-  '@agoric/inter-protocol/src/vpool-xyk-amm/multipoolMarketMaker.js'; // package relative
-
-const stopLossRoot =
-  '../src/stopLoss.js'
-
-export const setUpZoeForTest = async () => {
-  const { makeFar } = makeLoopback('zoeTest');
-
-  const { zoeService, feeMintAccess: nonFarFeeMintAccess } = makeZoeKit(
-    makeFakeVatAdmin(() => {}).admin,
-  );
-  /** @type {ERef<ZoeService>} */
-  const zoe = makeFar(zoeService);
-  const feeMintAccess = await makeFar(nonFarFeeMintAccess);
-  return {
-    zoe,
-    feeMintAccess,
-  };
-};
-harden(setUpZoeForTest);
-
-export const setupAMMBootstrap = async (
-  timer = buildManualTimer(console.log),
-  zoe,
-) => {
-  if (!zoe) {
-    ({ zoe } = await setUpZoeForTest());
-  }
-
-  const space = /** @type {any} */ (makePromiseSpace());
-  const { produce, consume } =
-    /** @type { import('@agoric/run-protocol/src/econ-behaviors.js').EconomyBootstrapPowers } */ (
-      space
-    );
-
-  produce.chainTimerService.resolve(timer);
-  produce.zoe.resolve(zoe);
-
-  const { agoricNames, spaces } = makeAgoricNamesAccess();
-  produce.agoricNames.resolve(agoricNames);
-
-  installGovernance(zoe, spaces.installation.produce);
-
-  return { produce, consume, ...spaces };
-};
+const contractRoots = {
+  ammRoot: '@agoric/inter-protocol/src/vpool-xyk-amm/multipoolMarketMaker.js',
+  reserveRoot: '@agoric/inter-protocol/src/reserve/assetReserve.js',
+  stopLossRoot: '../src/stopLoss.js'
+}
 
 /**
  * NOTE: called separately by each test so AMM/zoe/priceAuthority don't interfere
@@ -83,31 +44,44 @@ export const setupAMMBootstrap = async (
  * @param {{ committeeName: string, committeeSize: number}} electorateTerms
  * @param {{ brand: Brand, issuer: Issuer }} centralR
  * @param {ManualTimer | undefined=} timer
- * @param {ERef<ZoeService> | undefined=} zoe
+ * @param {ERef<ZoeService> | undefined=} farZoeKit
  */
 export const setupAmmServices = async (
   t,
   electorateTerms,
   centralR,
   timer = buildManualTimer(console.log),
-  zoe,
+  farZoeKit,
 ) => {
-  if (!zoe) {
-    ({ zoe } = await setUpZoeForTest());
+  if (!farZoeKit) {
+    farZoeKit = await setUpZoeForTest();
   }
-  const space = await setupAMMBootstrap(timer, zoe);
+  const { feeMintAccess, zoe } = farZoeKit;
+  const space = await setupAMMBootstrap(timer, farZoeKit);
+  space.produce.zoe.resolve(farZoeKit.zoe);
+  space.produce.feeMintAccess.resolve(feeMintAccess);
   const { consume, brand, issuer, installation, instance } = space;
-  const url = await importMetaResolve(ammRoot, import.meta.url);
-  const ammBundle = await provideBundle(t, new URL(url).pathname, 'amm');
+  const ammUrl = await importMetaResolve(contractRoots.ammRoot, import.meta.url);
+  const ammBundle = await provideBundle(t, new URL(ammUrl).pathname, 'amm');
   installation.produce.amm.resolve(E(zoe).install(ammBundle));
-
-  brand.produce.RUN.resolve(centralR.brand);
-  issuer.produce.RUN.resolve(centralR.issuer);
+  const reserveUrl = await importMetaResolve(contractRoots.reserveRoot, import.meta.url);
+  const reserveBundle = await provideBundle(t, new URL(reserveUrl).pathname, 'reserve');
+  installation.produce.reserve.resolve(E(zoe).install(reserveBundle));
+  brand.produce.IST.resolve(centralR.brand);
+  issuer.produce.IST.resolve(centralR.issuer);
 
   await Promise.all([
-    startEconomicCommittee(space, electorateTerms),
-    setupAmm(space),
+    await startEconomicCommittee(space, {
+      options: { econCommitteeOptions: electorateTerms },
+    }),
+    await setupAmm(space, {
+      options: {
+        minInitialPoolLiquidity: 1000n,
+      },
+    }),
   ]);
+
+  await setupReserve(space);
 
   const installs = await Collect.allValues({
     amm: installation.consume.amm,
@@ -164,7 +138,7 @@ export const setupStopLoss = async (
 
 ) => {
 
-  const contractPath = new URL(stopLossRoot, import.meta.url).pathname;
+  const contractPath = new URL(contractRoots.stopLossRoot, import.meta.url).pathname;
   const bundle = await bundleSource(contractPath);
   const installation = await E(zoe).install(bundle);
 

@@ -1,6 +1,8 @@
 // @ts-check
 
-import { test } from '@agoric/zoe/tools/prepare-test-env-ava.js';
+import '@agoric/zoe/exported.js';
+import '@agoric/zoe/tools/prepare-test-env.js';
+import test from 'ava';
 import { unsafeMakeBundleCache } from '@agoric/swingset-vat/tools/bundleTool.js';
 import { makeTracer } from '@agoric/inter-protocol/src/makeTracer.js';
 import {
@@ -48,6 +50,7 @@ test('Test lock LP Tokens to contract', async (t) => {
     /** @type IssuerKit */ centralR,
     /** @type IssuerKit */ secondaryR,
   } = await startServices(t);
+
   const centralInitialValue = 10n;
   const secondaryInitialValue = 20n;
 
@@ -60,10 +63,12 @@ test('Test lock LP Tokens to contract', async (t) => {
   const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
 
   const { /** @type Issuer */ liquidityIssuer } = await startAmmPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
     secondaryR,
+    'SCR',
     centralInitialValue,
     secondaryInitialValue,
   );
@@ -72,6 +77,7 @@ test('Test lock LP Tokens to contract', async (t) => {
   const secondaryValue = 60n;
 
   const payout = await addLiquidityToPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
@@ -157,10 +163,12 @@ test('Test remove Liquidity from AMM', async (t) => {
   const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
 
   const { /** @type Issuer */ liquidityIssuer } = await startAmmPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
     secondaryR,
+    'SCR',
     centralInitialValue,
     secondaryInitialValue,
   );
@@ -169,6 +177,7 @@ test('Test remove Liquidity from AMM', async (t) => {
   const secondaryValue = 60n;
 
   const payout = await addLiquidityToPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
@@ -278,10 +287,12 @@ test('trigger-lp-removal-price-moves-above-upper', async (t) => {
   const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
 
   const { /** @type Issuer */ liquidityIssuer } = await startAmmPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
     secondaryR,
+    'SCR',
     centralInitialValue,
     secondaryInitialValue,
   );
@@ -290,6 +301,7 @@ test('trigger-lp-removal-price-moves-above-upper', async (t) => {
   const secondaryValue = 60n;
 
   const payout = await addLiquidityToPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
@@ -409,10 +421,12 @@ test('trigger-lp-removal-price-moves-below-lower', async (t) => {
   const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
 
   const { /** @type Issuer */ liquidityIssuer } = await startAmmPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
     secondaryR,
+    'SCR',
     centralInitialValue,
     secondaryInitialValue,
   );
@@ -421,6 +435,7 @@ test('trigger-lp-removal-price-moves-below-lower', async (t) => {
   const secondaryValue = 60n;
 
   const payout = await addLiquidityToPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
@@ -539,10 +554,12 @@ test('update-boundaries-price-moves-below-old-lower-boundary', async (t) => {
   const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
 
   const { /** @type Issuer */ liquidityIssuer } = await startAmmPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
     secondaryR,
+    'SCR',
     centralInitialValue,
     secondaryInitialValue,
   );
@@ -551,6 +568,7 @@ test('update-boundaries-price-moves-below-old-lower-boundary', async (t) => {
   const secondaryValue = 60n;
 
   const payout = await addLiquidityToPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
@@ -685,10 +703,12 @@ test('update-boundaries-price-moves-above-old-upper-boundary', async (t) => {
   const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
 
   const { /** @type Issuer */ liquidityIssuer } = await startAmmPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
     secondaryR,
+    'SCR',
     centralInitialValue,
     secondaryInitialValue,
   );
@@ -697,6 +717,7 @@ test('update-boundaries-price-moves-above-old-upper-boundary', async (t) => {
   const secondaryValue = 60n;
 
   const payout = await addLiquidityToPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
@@ -833,10 +854,12 @@ test('update-boundaries-price-moves-above-old-upper-then-new-upper', async (t) =
   const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
 
   const { /** @type Issuer */ liquidityIssuer } = await startAmmPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
     secondaryR,
+    'SCR',
     centralInitialValue,
     secondaryInitialValue,
   );
@@ -845,6 +868,7 @@ test('update-boundaries-price-moves-above-old-upper-then-new-upper', async (t) =
   const secondaryValue = 60n;
 
   const payout = await addLiquidityToPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
@@ -1016,10 +1040,12 @@ test('update-boundaries-price-moves-below-old-lower-then-new-lower', async (t) =
   const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
 
   const { /** @type Issuer */ liquidityIssuer } = await startAmmPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
     secondaryR,
+    'SCR',
     centralInitialValue,
     secondaryInitialValue,
   );
@@ -1028,6 +1054,7 @@ test('update-boundaries-price-moves-below-old-lower-then-new-lower', async (t) =
   const secondaryValue = 60n;
 
   const payout = await addLiquidityToPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
@@ -1199,10 +1226,12 @@ test('update-boundaries-price-moves-below-old-lower-then-new-upper', async (t) =
   const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
 
   const { /** @type Issuer */ liquidityIssuer } = await startAmmPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
     secondaryR,
+    'SCR',
     centralInitialValue,
     secondaryInitialValue,
   );
@@ -1211,6 +1240,7 @@ test('update-boundaries-price-moves-below-old-lower-then-new-upper', async (t) =
   const secondaryValue = 60n;
 
   const payout = await addLiquidityToPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
@@ -1382,10 +1412,12 @@ test('Test withdraw Liquidity', async (t) => {
   const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
 
   const { /** @type Issuer */ liquidityIssuer } = await startAmmPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
     secondaryR,
+    'SCR',
     centralInitialValue,
     secondaryInitialValue,
   );
@@ -1394,6 +1426,7 @@ test('Test withdraw Liquidity', async (t) => {
   const secondaryValue = 60n;
 
   const payout = await addLiquidityToPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
@@ -1496,7 +1529,7 @@ test('Test withdraw Liquidity', async (t) => {
 
   const [withdrawLiquidityMessage, withdrawSeatAllocation,] = await Promise.all([
     E(withdrawSeat).getOfferResult(),
-    E(withdrawSeat).getCurrentAllocation(),
+    E(withdrawSeat).getCurrentAllocationJig(),
   ]);
 
   // Check Offer result and CreatorSeat allocation
@@ -1534,10 +1567,12 @@ test('boundaryWatcher-failed-no-tokens-locked', async (t) => {
   const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
 
   const { /** @type Issuer */ liquidityIssuer } = await startAmmPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
     secondaryR,
+    'SCR',
     centralInitialValue,
     secondaryInitialValue,
   );
@@ -1546,6 +1581,7 @@ test('boundaryWatcher-failed-no-tokens-locked', async (t) => {
   const secondaryValue = 60n;
 
   const payout = await addLiquidityToPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,

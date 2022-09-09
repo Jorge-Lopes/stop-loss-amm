@@ -15,15 +15,16 @@ import { AmountMath } from '@agoric/ertp';
 */
 
 /**
- *
- * @param {ERef<ZoeService>} zoe
- * @param {GovernedPublicFacet<XYKAMMPublicFacet>} ammPublicFacet
+ * @param t
+ * @param {ZoeService} zoe
+ * @param {XYKAMMPublicFacet} ammPublicFacet
  * @param {{ mint: Mint; issuer: Issuer; brand: Brand; displayInfo: DisplayInfo }} secondaryR
  * @param {{ mint: Mint; issuer: Issuer; brand: Brand; displayInfo: DisplayInfo }} centralR
  * @param {*} liquidityIssuer
  * @returns
  */
 export const makeLiquidityInvitations = async (
+  t,
   zoe,
   ammPublicFacet,
   secondaryR,
@@ -33,8 +34,36 @@ export const makeLiquidityInvitations = async (
   const makeCentral = (value) => AmountMath.make(centralR.brand, value * 10n ** BigInt(centralR.displayInfo.decimalPlaces));
   const makeSecondary = (value) => AmountMath.make(secondaryR.brand, value * 10n ** BigInt(secondaryR.displayInfo.decimalPlaces));
   const liquidityBrand = await E(liquidityIssuer).getBrand();
-  const liquidityAmounth = (value) =>
-    AmountMath.make(liquidityBrand, value);
+
+  const initPool = async (secondaryValue, centralValue) => {
+    const addPoolInvitation = E(ammPublicFacet).addPoolInvitation();
+
+    const proposal = harden({
+      give: {
+        Secondary: makeSecondary(secondaryValue),
+        Central: makeCentral(centralValue),
+      },
+      want: { Liquidity: AmountMath.make(liquidityBrand, 1000n) },
+    });
+    const payments = {
+      Secondary: secondaryR.mint.mintPayment(makeSecondary(secondaryValue)),
+      Central: centralR.mint.mintPayment(makeCentral(centralValue)),
+    };
+
+    /** @type UserSeat */
+    const addLiquiditySeat = await E(zoe).offer(
+      addPoolInvitation,
+      proposal,
+      payments,
+    );
+    t.is(
+      await E(addLiquiditySeat).getOfferResult(),
+      'Added liquidity.',
+      `Added Secondary and Central Liquidity`,
+    );
+
+    return { seat: addLiquiditySeat, liquidityIssuer };
+  };
 
   const addLiquidity = async (secondary, central) => {
     const addLiquidityInvitation = E(
@@ -47,7 +76,7 @@ export const makeLiquidityInvitations = async (
     const centralPayment = centralR.mint.mintPayment(makeCentral(central));
 
     const proposal = harden({
-      want: { Liquidity: liquidityAmounth(1000n) },
+      want: { Liquidity: AmountMath.make(liquidityBrand, 1000n) },
       give: {
         Secondary: makeSecondary(secondary),
         Central: makeCentral(central),
@@ -72,7 +101,7 @@ export const makeLiquidityInvitations = async (
       ammPublicFacet,
     ).makeRemoveLiquidityInvitation();
 
-    const emptyLiquidity = liquidityAmounth(liquidity);
+    const emptyLiquidity = AmountMath.make(liquidityBrand, liquidity);
     const proposal = harden({
       give: { Liquidity: emptyLiquidity },
       want: {
@@ -166,6 +195,7 @@ export const makeLiquidityInvitations = async (
   };
 
   return harden({
+    initPool,
     addLiquidity,
     removeLiquidity,
     swapSecondaryForCentral,

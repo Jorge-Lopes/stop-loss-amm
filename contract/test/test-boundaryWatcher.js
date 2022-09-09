@@ -1,5 +1,6 @@
 // @ts-check
-import { test as unknownTest} from '@agoric/zoe/tools/prepare-test-env-ava.js';
+import '@agoric/zoe/tools/prepare-test-env.js';
+import test from 'ava';
 import { E } from '@endo/far';
 import { getAmountIn, getAmountOut } from '@agoric/zoe/src/contractSupport/priceQuote.js';
 import { AmountMath, makeIssuerKit, AssetKind } from '@agoric/ertp';
@@ -12,7 +13,6 @@ import { eventLoopIteration } from '@agoric/zoe/tools/eventLoopIteration.js';
 import { BOUNDARY_WATCHER_STATUS, UPDATED_BOUNDARY_MESSAGE } from '../src/constants.js';
 import { makeTracer } from '@agoric/inter-protocol/src/makeTracer.js';
 
-const test = unknownTest;
 const trace = makeTracer('Boundary Watcher Test');
 
 test.before(async t => {
