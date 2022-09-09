@@ -112,10 +112,12 @@ const start = async (zcf) => {
   }); // Notify user
 
   const makeLockLPTokensInvitation = () => {
-    const lockLPTokens = (creatorSeat) => {
+    const lockLPTokens = async (creatorSeat) => {
       assertProposalShape(creatorSeat, {
         give: { Liquidity: null },
       });
+
+      await assertAllocationStatePhase(notifier, ALLOCATION_PHASE.SCHEDULED);
 
       const {
         give: { Liquidity: lpTokenAmount },
@@ -176,13 +178,14 @@ const start = async (zcf) => {
   };
 
   const makeWithdrawLiquidityInvitation = () => {
-    const withdrawLiquidity = (creatorSeat) => {
+    const withdrawLiquidity = async (creatorSeat) => {
       assertProposalShape(creatorSeat, {
         want: {
           Central: null,
           Secondary: null,
         },
       });
+      await assertAllocationStatePhase(notifier, ALLOCATION_PHASE.REMOVED);
 
       const centralAmountAllocated = stopLossSeat.getAmountAllocated(
         'Central',
@@ -192,8 +195,6 @@ const start = async (zcf) => {
         'Secondary',
         secondaryBrand,
       );
-
-      // assert that ALLOCATION_PHASE is REMOVED
 
       creatorSeat.incrementBy(
         stopLossSeat.decrementBy(
