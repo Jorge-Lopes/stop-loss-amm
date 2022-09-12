@@ -249,6 +249,7 @@ test('Test lock additional LP Tokens to contract', async (t) => {
   const additionalSecondaryValue = 40n;
 
   const additionalPayout = await addLiquidityToPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
@@ -1491,7 +1492,7 @@ test('boundaryWatcher-failed-no-tokens-locked', async (t) => {
   t.deepEqual(initialNotification.phase, ALLOCATION_PHASE.SCHEDULED);
 
   E(devPriceAuthority).setPrice(undefined);
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const [lpTokenAmountAllocated, lpTokenBrand, centralAmountAllocated, secondaryAmountAllocated, { value: notificationAfterBadPrice }] = await Promise.all([
     E(publicFacet).getBalanceByBrand('Liquidity', lpTokenIssuer),
@@ -1626,6 +1627,7 @@ test('Test withdraw Liquidity', async (t) => {
     },
   });
 
+  /** @type UserSeat */
   const withdrawSeat = E(zoe).offer(
     withdrawLiquidityInvitation,
     withdrawProposal,
@@ -1635,7 +1637,7 @@ test('Test withdraw Liquidity', async (t) => {
   const withdrawLiquidityMessage = await E(withdrawSeat).getOfferResult();
   t.deepEqual(withdrawLiquidityMessage, 'Liquidity withdraw to creator seat');
 
-  const withdrawSeatAllocation = await E(withdrawSeat).getCurrentAllocation();
+  const withdrawSeatAllocation = await E(withdrawSeat).getCurrentAllocationJig();
   t.deepEqual(withdrawSeatAllocation.Central, centralInUnit(30n));
   t.deepEqual(withdrawSeatAllocation.Secondary, secondaryInUnit(60n))
 
@@ -1756,6 +1758,7 @@ test('Test withdraw LP Tokens while locked', async (t) => {
   const withdrawLpTokensInvitation = await E(creatorFacet).makeWithdrawLpTokensInvitation();
   const withdrawProposal = harden({want: { Liquidity: AmountMath.makeEmpty(lpTokenBrand)}});
 
+  /** @type UserSeat */
   const withdrawLpSeat = E(zoe).offer(
     withdrawLpTokensInvitation,
     withdrawProposal,
@@ -1763,7 +1766,7 @@ test('Test withdraw LP Tokens while locked', async (t) => {
 
   const [withdrawLpTokenMessage, withdrawLpSeatAllocation] = await Promise.all([
     E(withdrawLpSeat).getOfferResult(),
-    E(withdrawLpSeat).getCurrentAllocation(),
+    E(withdrawLpSeat).getCurrentAllocationJig(),
   ]);
 
   // Check Offer result and creator seat allocation

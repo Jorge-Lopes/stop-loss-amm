@@ -294,7 +294,7 @@ export const moveFromCentralPriceUp = async (zoe,
     swapSecondaryForCentral,
     makeCentral,
     makeSecondary,
-  } = await makeLiquidityInvitations(undefined, zoe, ammPublicFacet, secondaryR, centralR, liquidityIssuer);
+  } = await makeLiquidityInvitations(undefined, zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer);
 
   const { amountOut } = await E(ammPublicFacet).getInputPrice(
     makeCentral(1n),
@@ -339,7 +339,7 @@ export const moveFromCentralPriceDown = async (zoe,
     swapCentralForSecondary,
     makeCentral,
     makeSecondary,
-  } = await makeLiquidityInvitations(undefined, zoe, ammPublicFacet, secondaryR, centralR, liquidityIssuer);
+  } = await makeLiquidityInvitations(undefined, zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer);
 
   const { amountOut } = await E(ammPublicFacet).getInputPrice(makeCentral(1n), makeSecondary(0n));
   let inputPriceAmountOut = amountOut;
