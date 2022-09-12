@@ -8,7 +8,7 @@ import {
 import { Far, E } from '@endo/far';
 import { AmountMath } from '@agoric/ertp';
 import { offerTo } from '@agoric/zoe/src/contractSupport/index.js';
-import { assertBoundaryShape, assertExecutionMode, assertAllocationStatePhase } from './assertionHelper.js';
+import { assertBoundaryShape, assertExecutionMode, assertAllocationStatePhase, assertLockTokens } from './assertionHelper.js';
 import { makeBoundaryWatcher } from './boundaryWatcher.js';
 import { makeNotifierKit } from '@agoric/notifier';
 import { ALLOCATION_PHASE, BOUNDARY_WATCHER_STATUS } from './constants.js';
@@ -121,13 +121,7 @@ const start = async (zcf) => {
         give: { Liquidity: null },
       });
 
-      //TODO: refractor the next condition
-      const lpBalance = getBalanceByBrand('Liquidity', lpTokenIssuer).value;
-      if (lpBalance === 0n) {
-        assertAllocationStatePhase(phaseSnapshot, ALLOCATION_PHASE.SCHEDULED);
-      } else {
-        assertAllocationStatePhase(phaseSnapshot, ALLOCATION_PHASE.ACTIVE);
-      }
+      assertLockTokens(phaseSnapshot);
 
       const {
         give: { Liquidity: lpTokenAmount },
