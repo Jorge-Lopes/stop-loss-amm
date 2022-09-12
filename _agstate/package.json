@@ -1,0 +1,7 @@
+{
+  "name": "ag-state",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Contract for the Agoric Dapp",
+  "type": "module"
+}
