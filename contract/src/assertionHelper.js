@@ -47,7 +47,7 @@ export const assertAllocationStatePhase = (phaseSnapshot, phase) => {
   assert(phaseSnapshot === phase, X`AllocationState phase should be: ${phase}`);
 };
 
-export const assertLockTokens = (phase) => {
+export const assertScheduledOrActive = (phase) => {
   const checkStatePhase = (phase) => {
     switch (phase) {
       case ALLOCATION_PHASE.SCHEDULED:
