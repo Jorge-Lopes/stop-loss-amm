@@ -1,10 +1,7 @@
 import { E } from '@endo/far';
 import { makePromiseKit } from '@endo/promise-kit';
-import {
-  BOUNDARY_WATCHER_STATUS,
-  UPDATED_BOUNDARY_MESSAGE,
-} from './constants.js';
-import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
+import { BOUNDARY_WATCHER_STATUS, UPDATED_BOUNDARY_MESSAGE } from './constants.js';
+import { makeTracer } from '@agoric/inter-protocol/src/makeTracer.js';
 import { assertBoundaryShape } from './assertionHelper.js';
 
 const trace = makeTracer('Boundary Watcher Module');
@@ -17,11 +14,12 @@ const trace = makeTracer('Boundary Watcher Module');
  * @param {Brand} secondaryBrand
  */
 export const makeBoundaryWatcher = ({
-  fromCentralPriceAuthority,
-  boundaries,
-  centralBrand,
-  secondaryBrand,
-}) => {
+                                     fromCentralPriceAuthority,
+                                     boundaries,
+                                     centralBrand,
+                                     secondaryBrand,
+                                   }) => {
+
   assertBoundaryShape(boundaries, centralBrand, secondaryBrand);
 
   const boundaryPromiseKit = makePromiseKit();

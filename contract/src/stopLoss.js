@@ -12,7 +12,7 @@ import { assertBoundaryShape, assertExecutionMode, assertAllocationStatePhase } 
 import { makeBoundaryWatcher } from './boundaryWatcher.js';
 import { makeNotifierKit } from '@agoric/notifier';
 import { ALLOCATION_PHASE, BOUNDARY_WATCHER_STATUS } from './constants.js';
-import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
+import { makeTracer } from '@agoric/inter-protocol/src/makeTracer.js';
 
 
 const tracer = makeTracer('StopLoss');

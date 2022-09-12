@@ -1,8 +1,10 @@
 // @ts-check
 
-import { test } from '@agoric/zoe/tools/prepare-test-env-ava.js';
-import { unsafeMakeBundleCache } from '@agoric/run-protocol/test/bundleTool.js';
-import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
+import '@agoric/zoe/exported.js';
+import '@agoric/zoe/tools/prepare-test-env.js';
+import test from 'ava';
+import { unsafeMakeBundleCache } from '@agoric/swingset-vat/tools/bundleTool.js';
+import { makeTracer } from '@agoric/inter-protocol/src/makeTracer.js';
 import {
   addLiquidityToPool,
   startAmmPool,
@@ -13,7 +15,7 @@ import {
 } from './helper.js';
 import { E } from '@endo/far';
 import { makeRatioFromAmounts } from '@agoric/zoe/src/contractSupport/ratio.js';
-import { waitForPromisesToSettle } from '@agoric/run-protocol/test/supports.js';
+import { eventLoopIteration } from '@agoric/zoe/tools/eventLoopIteration.js';
 import { AmountMath } from '@agoric/ertp';
 import { ALLOCATION_PHASE, UPDATED_BOUNDARY_MESSAGE } from '../src/constants.js';
 import { makeManualPriceAuthority } from '@agoric/zoe/tools/manualPriceAuthority.js';
@@ -48,6 +50,7 @@ test('Test lock LP Tokens to contract', async (t) => {
     /** @type IssuerKit */ centralR,
     /** @type IssuerKit */ secondaryR,
   } = await startServices(t);
+
   const centralInitialValue = 10n;
   const secondaryInitialValue = 20n;
 
@@ -60,10 +63,12 @@ test('Test lock LP Tokens to contract', async (t) => {
   const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
 
   const { /** @type Issuer */ lpTokenIssuer } = await startAmmPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
     secondaryR,
+    'SCR',
     centralInitialValue,
     secondaryInitialValue,
   );
@@ -72,6 +77,7 @@ test('Test lock LP Tokens to contract', async (t) => {
   const secondaryValue = 60n;
 
   const payout = await addLiquidityToPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
@@ -157,10 +163,12 @@ test('Test lock additional LP Tokens to contract', async (t) => {
   const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
 
   const { /** @type Issuer */ lpTokenIssuer } = await startAmmPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
     secondaryR,
+    'SCR',
     centralInitialValue,
     secondaryInitialValue,
   );
@@ -169,6 +177,7 @@ test('Test lock additional LP Tokens to contract', async (t) => {
   const secondaryValue = 60n;
 
   const payout = await addLiquidityToPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
@@ -291,10 +300,12 @@ test('trigger-lp-removal-price-moves-above-upper', async (t) => {
   const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
 
   const { /** @type Issuer */ lpTokenIssuer } = await startAmmPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
     secondaryR,
+    'SCR',
     centralInitialValue,
     secondaryInitialValue,
   );
@@ -303,6 +314,7 @@ test('trigger-lp-removal-price-moves-above-upper', async (t) => {
   const secondaryValue = 60n;
 
   const payout = await addLiquidityToPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
@@ -376,7 +388,7 @@ test('trigger-lp-removal-price-moves-above-upper', async (t) => {
 
   trace('Input price after', inputPriceAfter);
 
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const [lpTokenAmountAllocated, lpTokenBrand, centralAmountAllocated, secondaryAmountAllocated, { value: notificationAfterPriceAboveUpper }] = await Promise.all([
     E(publicFacet).getBalanceByBrand('Liquidity', lpTokenIssuer),
@@ -422,10 +434,12 @@ test('trigger-lp-removal-price-moves-below-lower', async (t) => {
   const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
 
   const { /** @type Issuer */ lpTokenIssuer } = await startAmmPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
     secondaryR,
+    'SCR',
     centralInitialValue,
     secondaryInitialValue,
   );
@@ -434,6 +448,7 @@ test('trigger-lp-removal-price-moves-below-lower', async (t) => {
   const secondaryValue = 60n;
 
   const payout = await addLiquidityToPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
@@ -506,7 +521,7 @@ test('trigger-lp-removal-price-moves-below-lower', async (t) => {
   console.log('Done.');
   trace('InputPriceAfter', inputPriceAfter);
 
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const [lpTokenAmountAllocated, lpTokenBrand, centralAmountAllocated, secondaryAmountAllocated, { value: notificationAfterPriceExceedsLimit }] = await Promise.all([
     E(publicFacet).getBalanceByBrand('Liquidity', lpTokenIssuer),
@@ -552,10 +567,12 @@ test('update-boundaries-price-moves-below-old-lower-boundary', async (t) => {
   const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
 
   const { /** @type Issuer */ lpTokenIssuer } = await startAmmPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
     secondaryR,
+    'SCR',
     centralInitialValue,
     secondaryInitialValue,
   );
@@ -564,6 +581,7 @@ test('update-boundaries-price-moves-below-old-lower-boundary', async (t) => {
   const secondaryValue = 60n;
 
   const payout = await addLiquidityToPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
@@ -653,7 +671,7 @@ test('update-boundaries-price-moves-below-old-lower-boundary', async (t) => {
   t.truthy(AmountMath.isGTE(boundaries.lower.numerator, inputPriceAfter));
   t.truthy(AmountMath.isGTE(inputPriceAfter, newBoundaries.lower.numerator));
 
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const [lpTokenAmountAllocated, centralAmountAllocated, secondaryAmountAllocated, { value: notificationAfterPriceExceedsLimit }] = await Promise.all([
     E(publicFacet).getBalanceByBrand('Liquidity', lpTokenIssuer),
@@ -698,10 +716,12 @@ test('update-boundaries-price-moves-above-old-upper-boundary', async (t) => {
   const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
 
   const { /** @type Issuer */ lpTokenIssuer } = await startAmmPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
     secondaryR,
+    'SCR',
     centralInitialValue,
     secondaryInitialValue,
   );
@@ -710,6 +730,7 @@ test('update-boundaries-price-moves-above-old-upper-boundary', async (t) => {
   const secondaryValue = 60n;
 
   const payout = await addLiquidityToPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
@@ -801,7 +822,7 @@ test('update-boundaries-price-moves-above-old-upper-boundary', async (t) => {
   t.truthy(AmountMath.isGTE(inputPriceAfter, boundaries.upper.numerator));
   t.truthy(AmountMath.isGTE(newBoundaries.upper.numerator, inputPriceAfter));
 
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const [lpTokenAmountAllocated, centralAmountAllocated, secondaryAmountAllocated, { value: notificationAfterPriceExceedsLimit }] = await Promise.all([
     E(publicFacet).getBalanceByBrand('Liquidity', lpTokenIssuer),
@@ -846,10 +867,12 @@ test('update-boundaries-price-moves-above-old-upper-then-new-upper', async (t) =
   const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
 
   const { /** @type Issuer */ lpTokenIssuer } = await startAmmPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
     secondaryR,
+    'SCR',
     centralInitialValue,
     secondaryInitialValue,
   );
@@ -858,6 +881,7 @@ test('update-boundaries-price-moves-above-old-upper-then-new-upper', async (t) =
   const secondaryValue = 60n;
 
   const payout = await addLiquidityToPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
@@ -947,7 +971,7 @@ test('update-boundaries-price-moves-above-old-upper-then-new-upper', async (t) =
   t.truthy(AmountMath.isGTE(newBoundaries.upper.numerator, inputPriceAfter));
   t.truthy(AmountMath.isGTE(inputPriceAfter, boundaries.upper.numerator));
 
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const [lpTokenAmountAllocated, centralAmountAllocated, secondaryAmountAllocated, { value: notificationAfterPriceExceedsOldLimit }] =
     await Promise.all([
@@ -980,7 +1004,7 @@ test('update-boundaries-price-moves-above-old-upper-then-new-upper', async (t) =
   console.log('Done.');
   trace('inputPriceAfterBoundariesUpdated', inputPriceAfterBoundariesUpdated);
 
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const [
     lpTokenAmountAllocatedAfterUpdate,
@@ -1029,10 +1053,12 @@ test('update-boundaries-price-moves-below-old-lower-then-new-lower', async (t) =
   const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
 
   const { /** @type Issuer */ lpTokenIssuer } = await startAmmPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
     secondaryR,
+    'SCR',
     centralInitialValue,
     secondaryInitialValue,
   );
@@ -1041,6 +1067,7 @@ test('update-boundaries-price-moves-below-old-lower-then-new-lower', async (t) =
   const secondaryValue = 60n;
 
   const payout = await addLiquidityToPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
@@ -1130,7 +1157,7 @@ test('update-boundaries-price-moves-below-old-lower-then-new-lower', async (t) =
   t.truthy(AmountMath.isGTE(boundaries.lower.numerator, inputPriceAfter));
   t.truthy(AmountMath.isGTE(inputPriceAfter, newBoundaries.lower.numerator));
 
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const [lpTokenAmountAllocated, centralAmountAllocated, secondaryAmountAllocated, { value: notificationAfterPriceExceedsOldLimit }] =
     await Promise.all([
@@ -1163,7 +1190,7 @@ test('update-boundaries-price-moves-below-old-lower-then-new-lower', async (t) =
   console.log('Done.');
   trace('inputPriceAfterBoundariesUpdated', inputPriceAfterBoundariesUpdated);
 
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const [
     lpTokenAmountAllocatedAfterUpdate,
@@ -1212,10 +1239,12 @@ test('update-boundaries-price-moves-below-old-lower-then-new-upper', async (t) =
   const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
 
   const { /** @type Issuer */ lpTokenIssuer } = await startAmmPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
     secondaryR,
+    'SCR',
     centralInitialValue,
     secondaryInitialValue,
   );
@@ -1224,6 +1253,7 @@ test('update-boundaries-price-moves-below-old-lower-then-new-upper', async (t) =
   const secondaryValue = 60n;
 
   const payout = await addLiquidityToPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
@@ -1313,7 +1343,7 @@ test('update-boundaries-price-moves-below-old-lower-then-new-upper', async (t) =
   t.truthy(AmountMath.isGTE(boundaries.lower.numerator, inputPriceAfter));
   t.truthy(AmountMath.isGTE(inputPriceAfter, newBoundaries.lower.numerator));
 
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const [lpTokenAmountAllocated, centralAmountAllocated, secondaryAmountAllocated, { value: notificationAfterPriceExceedsOldLimit }] =
     await Promise.all([
@@ -1346,7 +1376,7 @@ test('update-boundaries-price-moves-below-old-lower-then-new-upper', async (t) =
   console.log('Done.');
   trace('inputPriceAfterBoundariesUpdated', inputPriceAfterBoundariesUpdated);
 
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const [
     lpTokenAmountAllocatedAfterUpdate,
@@ -1391,10 +1421,12 @@ test('boundaryWatcher-failed-no-tokens-locked', async (t) => {
   const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
 
   const { /** @type Issuer */ lpTokenIssuer } = await startAmmPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
     secondaryR,
+    'SCR',
     centralInitialValue,
     secondaryInitialValue,
   );
@@ -1403,6 +1435,7 @@ test('boundaryWatcher-failed-no-tokens-locked', async (t) => {
   const secondaryValue = 60n;
 
   const payout = await addLiquidityToPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
@@ -1504,10 +1537,12 @@ test('Test withdraw Liquidity', async (t) => {
   const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
 
   const { /** @type Issuer */ lpTokenIssuer } = await startAmmPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
     secondaryR,
+    'SCR',
     centralInitialValue,
     secondaryInitialValue,
   );
@@ -1516,6 +1551,7 @@ test('Test withdraw Liquidity', async (t) => {
   const secondaryValue = 60n;
 
   const payout = await addLiquidityToPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
@@ -1596,13 +1632,13 @@ test('Test withdraw Liquidity', async (t) => {
   );
 
   // Check Offer result and creator seat allocation
-  const withdrawLiquidityMessage = await E(withdrawSeat).getOfferResult(); 
+  const withdrawLiquidityMessage = await E(withdrawSeat).getOfferResult();
   t.deepEqual(withdrawLiquidityMessage, 'Liquidity withdraw to creator seat');
 
   const withdrawSeatAllocation = await E(withdrawSeat).getCurrentAllocation();
   t.deepEqual(withdrawSeatAllocation.Central, centralInUnit(30n));
   t.deepEqual(withdrawSeatAllocation.Secondary, secondaryInUnit(60n))
- 
+
   const [withdrawCentralBalance, withdrawSecondaryBalance, withdrawLiquidityBalance,  { value: notificationAfterWithdraw }] = await Promise.all([
     E(publicFacet).getBalanceByBrand('Central', centralIssuer),
     E(publicFacet).getBalanceByBrand('Secondary', secondaryIssuer),
@@ -1635,10 +1671,12 @@ test('Test withdraw LP Tokens while locked', async (t) => {
   const { makeAmount: liquidityInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
 
   const { /** @type Issuer */ lpTokenIssuer } = await startAmmPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
     secondaryR,
+    'SCR',
     centralInitialValue,
     secondaryInitialValue,
   );
@@ -1647,6 +1685,7 @@ test('Test withdraw LP Tokens while locked', async (t) => {
   const secondaryValue = 60n;
 
   const payout = await addLiquidityToPool(
+    t,
     zoe,
     ammPublicFacet,
     centralR,
@@ -1725,7 +1764,7 @@ test('Test withdraw LP Tokens while locked', async (t) => {
   const [withdrawLpTokenMessage, withdrawLpSeatAllocation] = await Promise.all([
     E(withdrawLpSeat).getOfferResult(),
     E(withdrawLpSeat).getCurrentAllocation(),
-  ]); 
+  ]);
 
   // Check Offer result and creator seat allocation
   t.deepEqual(withdrawLpTokenMessage, 'LP Tokens withdraw to creator seat');
@@ -1743,8 +1782,5 @@ test('Test withdraw LP Tokens while locked', async (t) => {
 
 
 
-  
+
 });
-
-
-

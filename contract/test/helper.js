@@ -5,7 +5,7 @@ import { assertPayoutAmount } from '@agoric/zoe/test/zoeTestHelpers.js';
 import buildManualTimer from '@agoric/zoe/tools/manualTimer.js';
 import { E } from '@endo/far';
 import { makeLiquidityInvitations } from './ammLiquidity.js';
-import { setupAmmServices, setupStopLoss } from './setup.js';
+import { setupStopLoss, setupAmmServices } from './setup.js';
 import { getAmountOut } from '@agoric/zoe/src/contractSupport/priceQuote.js';
 import {
   floorMultiplyBy,
@@ -19,16 +19,8 @@ import {
 */
 
 export const makeAssets = () => {
-  const centralR = makeIssuerKit(
-    'Central',
-    AssetKind.NAT,
-    harden({ decimalPlaces: 8 }),
-  );
-  const secondaryR = makeIssuerKit(
-    'Secondary',
-    AssetKind.NAT,
-    harden({ decimalPlaces: 8 }),
-  );
+  const centralR = makeIssuerKit('Central', AssetKind.NAT, harden({ decimalPlaces: 8 }));
+  const secondaryR = makeIssuerKit('Secondary', AssetKind.NAT, harden({ decimalPlaces: 8 }));
 
   return { centralR, secondaryR };
 };
@@ -54,21 +46,35 @@ export async function startServices(t) {
   };
 }
 
+/**
+ * @param t
+ * @param zoe
+ * @param {XYKAMMPublicFacet} ammPublicFacet
+ * @param centralR
+ * @param secondaryR
+ * @param kwd
+ * @param centralInitialValue
+ * @param secondaryInitialValue
+ * @returns {Promise<{zoe, secondaryR, payout: *, ammPublicFacet, centralR, liquidityIssuer: *}>}
+ */
 export async function startAmmPool(
+  t,
   zoe,
   ammPublicFacet,
   centralR,
   secondaryR,
+  kwd,
   centralInitialValue,
   secondaryInitialValue,
 ) {
   // Here we are creating a pool with (central - secondary)
-  const lpTokenIssuer = await E(ammPublicFacet).addPool(
+  const lpTokenIssuer = await E(ammPublicFacet).addIssuer(
     secondaryR.issuer,
-    'Amm',
+    kwd,
   );
 
-  const { addLiquidity } = await makeLiquidityInvitations(
+  const { initPool } = await makeLiquidityInvitations(
+    t,
     zoe,
     ammPublicFacet,
     secondaryR,
@@ -76,7 +82,7 @@ export async function startAmmPool(
     lpTokenIssuer,
   );
 
-  const payout = await addLiquidity(secondaryInitialValue, centralInitialValue);
+  await initPool(secondaryInitialValue, centralInitialValue);
 
   return {
     zoe,
@@ -84,11 +90,11 @@ export async function startAmmPool(
     secondaryR,
     centralR,
     lpTokenIssuer,
-    payout,
   };
 }
 
 export async function addLiquidityToPool(
+  t,
   zoe,
   ammPublicFacet,
   centralR,
@@ -98,6 +104,7 @@ export async function addLiquidityToPool(
   secondaryValue,
 ) {
   const { addLiquidity } = await makeLiquidityInvitations(
+    t,
     zoe,
     ammPublicFacet,
     secondaryR,
@@ -109,6 +116,7 @@ export async function addLiquidityToPool(
 }
 
 export async function removeLiquidityToPool(
+  t,
   zoe,
   ammPublicFacet,
   centralR,
@@ -118,6 +126,7 @@ export async function removeLiquidityToPool(
   liquidityValue,
 ) {
   const { removeLiquidity } = await makeLiquidityInvitations(
+    t,
     zoe,
     ammPublicFacet,
     secondaryR,
@@ -274,23 +283,18 @@ export const getBoundaries = async (
  * @param {BigInt} swapInterval
  * @returns {Promise<void>}
  */
-export const moveFromCentralPriceUp = async (
-  zoe,
-  ammPublicFacet,
-  secondaryR,
-  centralR,
-  lpTokenIssuer,
-  upperBoundary,
-  swapInterval = 1n,
-) => {
-  const { swapSecondaryForCentral, makeCentral, makeSecondary } =
-    await makeLiquidityInvitations(
-      zoe,
-      ammPublicFacet,
-      secondaryR,
-      centralR,
-      lpTokenIssuer,
-    );
+export const moveFromCentralPriceUp = async (zoe,
+                                             ammPublicFacet,
+                                             secondaryR,
+                                             centralR,
+                                             lpTokenIssuer,
+                                             upperBoundary,
+                                             swapInterval = 1n) => {
+  const {
+    swapSecondaryForCentral,
+    makeCentral,
+    makeSecondary,
+  } = await makeLiquidityInvitations(undefined, zoe, ammPublicFacet, secondaryR, centralR, liquidityIssuer);
 
   const { amountOut } = await E(ammPublicFacet).getInputPrice(
     makeCentral(1n),
@@ -323,28 +327,21 @@ export const moveFromCentralPriceUp = async (
  * @param {BigInt} swapInterval
  * @returns {Promise<void>}
  */
-export const moveFromCentralPriceDown = async (
-  zoe,
-  ammPublicFacet,
-  secondaryR,
-  centralR,
-  lpTokenIssuer,
-  lowerBoundary,
-  swapInterval = 1n,
-) => {
-  const { swapCentralForSecondary, makeCentral, makeSecondary } =
-    await makeLiquidityInvitations(
-      zoe,
-      ammPublicFacet,
-      secondaryR,
-      centralR,
-      lpTokenIssuer,
-    );
+export const moveFromCentralPriceDown = async (zoe,
+                                               ammPublicFacet,
+                                               secondaryR,
+                                               centralR,
+                                               lpTokenIssuer,
+                                               lowerBoundary,
+                                               swapInterval = 1n) => {
 
-  const { amountOut } = await E(ammPublicFacet).getInputPrice(
-    makeCentral(1n),
-    makeSecondary(0n),
-  );
+  const {
+    swapCentralForSecondary,
+    makeCentral,
+    makeSecondary,
+  } = await makeLiquidityInvitations(undefined, zoe, ammPublicFacet, secondaryR, centralR, liquidityIssuer);
+
+  const { amountOut } = await E(ammPublicFacet).getInputPrice(makeCentral(1n), makeSecondary(0n));
   let inputPriceAmountOut = amountOut;
 
   while (AmountMath.isGTE(inputPriceAmountOut, lowerBoundary.numerator)) {

@@ -1,16 +1,16 @@
 // @ts-check
 
-import { test } from '@agoric/zoe/tools/prepare-test-env-ava.js';
+import '@agoric/zoe/tools/prepare-test-env.js';
+import test from 'ava';
 import { E } from '@endo/far';
 import { AmountMath } from '@agoric/ertp';
-import { unsafeMakeBundleCache } from '@agoric/run-protocol/test/bundleTool.js';
+import { unsafeMakeBundleCache } from '@agoric/swingset-vat/tools/bundleTool.js';
 import {
   addLiquidityToPool,
   makeAssertPayouts,
   removeLiquidityToPool,
   startAmmPool,
   startServices,
-  swap,
 } from './helper.js';
 
 /*
@@ -20,35 +20,51 @@ import {
 
 test.before(async (t) => {
   const bundleCache = await unsafeMakeBundleCache('bundles/');
-  t.context = { bundleCache };
+
+  const makeAllocations = (centralR, liquidityR, secondaryR) => {
+    const allocations = (c, l, s) => ({
+      Central: AmountMath.make(centralR.brand, c * 10n ** BigInt(centralR.displayInfo.decimalPlaces)),
+      Liquidity: AmountMath.make(liquidityR.brand, l * 10n ** BigInt(liquidityR.displayInfo.decimalPlaces)),
+      Secondary: AmountMath.make(secondaryR.brand, s * 10n ** BigInt(secondaryR.displayInfo.decimalPlaces)),
+    });
+
+    return harden(allocations);
+  }
+
+
+  t.context = { bundleCache, makeAllocations };
 });
 
 test('start amm pool', async (t) => {
+  const { makeAllocations } = t.context;
   const { zoe, amm, centralR, secondaryR } = await startServices(t);
 
-  const centralInitialValue = 10_000n;
-  const secondaryInitialValue = 20_000n;
+  const centralInitialValue = 10n;
+  const secondaryInitialValue = 20n;
 
-  const { secondaryLiquidityIssuer, payout } = await startAmmPool(
+  const { liquidityIssuer: secondaryLiquidityIssuer } = await startAmmPool(
+    t,
     zoe,
-    amm,
+    amm.ammPublicFacet,
     centralR,
     secondaryR,
+    'SCR',
     centralInitialValue,
     secondaryInitialValue,
   );
 
-  const liquidityBrand = await E(secondaryLiquidityIssuer).getBrand();
+  const [liquidityBrand, liquidityDisplayInfo] = await Promise.all([
+    E(secondaryLiquidityIssuer).getBrand(),
+    E(E(secondaryLiquidityIssuer).getBrand()).getDisplayInfo()
+  ]);
 
-  const allocation = (c, l, s) => ({
-    Central: AmountMath.make(centralR.brand, c),
-    Liquidity: AmountMath.make(liquidityBrand, l),
-    Secondary: AmountMath.make(secondaryR.brand, s),
-  });
+  const liquidityR = { brand: liquidityBrand, displayInfo: liquidityDisplayInfo };
+
+  const allocations  = makeAllocations(centralR, liquidityR, secondaryR);
 
   t.deepEqual(
     await E(amm.ammPublicFacet).getPoolAllocation(secondaryR.brand),
-    allocation(10_000n, 0n, 20_000n),
+    allocations(10n, 0n, 20n),
     `poolAllocation after initialization`,
   );
 });

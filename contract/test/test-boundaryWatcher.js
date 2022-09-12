@@ -1,5 +1,6 @@
 // @ts-check
-import { test } from '@agoric/zoe/tools/prepare-test-env-ava.js';
+import '@agoric/zoe/tools/prepare-test-env.js';
+import test from 'ava';
 import { E } from '@endo/far';
 import { getAmountIn, getAmountOut } from '@agoric/zoe/src/contractSupport/priceQuote.js';
 import { AmountMath, makeIssuerKit, AssetKind } from '@agoric/ertp';
@@ -8,9 +9,9 @@ import { getBoundaries, makeAssets } from './helper.js';
 import buildManualTimer from '@agoric/zoe/tools/manualTimer.js';
 import { makeRatio, makeRatioFromAmounts } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { makeBoundaryWatcher } from '../src/boundaryWatcher.js';
-import { waitForPromisesToSettle } from '@agoric/run-protocol/test/supports.js';
+import { eventLoopIteration } from '@agoric/zoe/tools/eventLoopIteration.js';
 import { BOUNDARY_WATCHER_STATUS, UPDATED_BOUNDARY_MESSAGE } from '../src/constants.js';
-import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
+import { makeTracer } from '@agoric/inter-protocol/src/makeTracer.js';
 
 const trace = makeTracer('Boundary Watcher Test');
 
@@ -77,7 +78,7 @@ test('price-goes-above-upper', async t => {
   );
 
   E(fromCentralPriceAuthority).setPrice(newSecondaryPrice);
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
 });
 
@@ -137,7 +138,7 @@ test('price-goes-below-lower', async t => {
   );
 
   await E(fromCentralPriceAuthority).setPrice(lastSecondaryPrice);
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
 });
 
@@ -220,7 +221,7 @@ test('update-upper-boundary-then-price-goes-above-upper', async t => {
 
   await E(fromCentralPriceAuthority).setPrice(lastSecondaryPrice);
 
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
 });
 
@@ -303,7 +304,7 @@ test('update-lower-boundary-then-price-goes-below-lower', async t => {
 
   await E(fromCentralPriceAuthority).setPrice(lastSecondaryPrice);
 
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
 });
 
@@ -387,7 +388,7 @@ test('update-both-boundaries-then-price-goes-above-upper', async t => {
 
   await E(fromCentralPriceAuthority).setPrice(lastSecondaryPrice);
 
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
 });
 
@@ -433,7 +434,7 @@ test('mutableQuote-promises-rejected', async t => {
   });
 
   await E(fromCentralPriceAuthority).setPrice(undefined);
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
 });
 
