@@ -2,6 +2,7 @@ import { assert, details as X } from '@agoric/assert';
 import { assertIsRatio } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { E } from '@endo/far';
 import { makeTracer } from '@agoric/inter-protocol/src/makeTracer.js';
+import { ALLOCATION_PHASE } from './constants.js';
 
 const tracer = makeTracer('assertionHelper');
 
@@ -45,3 +46,17 @@ export const assertExecutionMode = (ammPublicFacet, devPriceAuthority) => {
 export const assertAllocationStatePhase = (phaseSnapshot, phase) => {
   assert(phaseSnapshot === phase, X`AllocationState phase should be: ${phase}`);
 };
+
+export const assertLockTokens = (phase) => {
+  const checkStatePhase = (phase) => {
+    switch (phase) {
+      case ALLOCATION_PHASE.SCHEDULED:
+      case ALLOCATION_PHASE.ACTIVE:
+        return true;
+      default:
+        return false;
+    }
+  };
+
+  assert(checkStatePhase(phase), X`The phase should be ACTIVE or SCHEDULED to lock tokens`);
+}
