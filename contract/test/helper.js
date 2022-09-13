@@ -139,6 +139,7 @@ export async function removeLiquidityToPool(
 }
 
 export async function swapSecondaryForCentral(
+  t,
   zoe,
   ammPublicFacet,
   secondaryR,
@@ -147,6 +148,7 @@ export async function swapSecondaryForCentral(
   secondaryValueIn,
 ) {
   const { swapSecondaryForCentral } = await makeLiquidityInvitations(
+    t,
     zoe,
     ammPublicFacet,
     secondaryR,
@@ -159,6 +161,7 @@ export async function swapSecondaryForCentral(
 }
 
 export async function swapCentralForSecondary(
+  t,
   zoe,
   ammPublicFacet,
   secondaryR,
@@ -167,6 +170,7 @@ export async function swapCentralForSecondary(
   centralValueIn,
 ) {
   const { swapCentralForSecondary } = await makeLiquidityInvitations(
+    t,
     zoe,
     ammPublicFacet,
     secondaryR,
@@ -181,7 +185,7 @@ export async function swapCentralForSecondary(
 export const makeAssertPayouts = (
   t,
   lpTokenIssuer,
-  liquidityBrand,
+  lpTokenBrand,
   centralR,
   secondaryR,
 ) => {
@@ -193,7 +197,7 @@ export const makeAssertPayouts = (
     sPayment,
     sExpected,
   ) => {
-    const lAmount = AmountMath.make(liquidityBrand, lExpected);
+    const lAmount = AmountMath.make(lpTokenBrand, lExpected);
     await assertPayoutAmount(
       t,
       lpTokenIssuer,
