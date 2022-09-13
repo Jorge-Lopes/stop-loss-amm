@@ -3,6 +3,7 @@ import { assertIsRatio } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { E } from '@endo/far';
 import { makeTracer } from '@agoric/inter-protocol/src/makeTracer.js';
 import { ALLOCATION_PHASE } from './constants.js';
+import { AmountMath } from '@agoric/ertp';
 
 const tracer = makeTracer('assertionHelper');
 
@@ -28,6 +29,13 @@ export const assertBoundaryShape = (boundaries, centralBrand, secondaryBrand) =>
   assert(lower.numerator.brand === secondaryBrand, X`Numerator of the lower ratio should be of the brand: ${secondaryBrand}`);
   assert(lower.denominator.brand === centralBrand, X`Denominator of the lower ratio should be of the brand: ${centralBrand}`);
 };
+
+export const assertInitialBoundariesRange = (boundaries, quoteAmountOut) => {
+  const { upper, lower } = boundaries;
+  
+  assert(AmountMath.isGTE(upper.numerator, quoteAmountOut), X`Upper boundary should be higher or equal to current price: ${quoteAmountOut.value}`)
+  assert(AmountMath.isGTE(quoteAmountOut, lower.numerator), X`Lower boundary should be lower or equal to current price: ${quoteAmountOut.value}`)
+}
 
 /**
  *
