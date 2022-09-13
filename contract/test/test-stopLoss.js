@@ -14,12 +14,13 @@ import {
   swapCentralForSecondary, getBoundaries, moveFromCentralPriceUp, moveFromCentralPriceDown,
 } from './helper.js';
 import { E } from '@endo/far';
-import { makeRatioFromAmounts } from '@agoric/zoe/src/contractSupport/ratio.js';
+import { floorMultiplyBy, makeRatio, makeRatioFromAmounts } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { eventLoopIteration } from '@agoric/zoe/tools/eventLoopIteration.js';
 import { AmountMath } from '@agoric/ertp';
 import { ALLOCATION_PHASE, UPDATED_BOUNDARY_MESSAGE } from '../src/constants.js';
 import { makeManualPriceAuthority } from '@agoric/zoe/tools/manualPriceAuthority.js';
 import buildManualTimer from '@agoric/zoe/tools/manualTimer.js';
+import { getAmountOut } from '@agoric/zoe/src/contractSupport/priceQuote.js';
 
 const trace = makeTracer('Test-StopLoss');
 
@@ -1788,7 +1789,7 @@ test('Test withdraw LP Tokens while locked', async (t) => {
 
 });
 
-test('update-boundaries-outside-of-price-range', async (t) => {
+test('update-boundaries-outside-of-price-ratio', async (t) => {
   const { /** @type ZoeService */ zoe,
     /** @type XYKAMMPublicFacet */ amm,
     /** @type IssuerKit */ centralR,
@@ -1926,4 +1927,110 @@ test('update-boundaries-outside-of-price-range', async (t) => {
   t.deepEqual(notificationAfterPriceExceedsLimit.lpBalance, lpTokenAmountAllocated);
   t.deepEqual(notificationAfterPriceExceedsLimit.liquidityBalance.central, centralAmountAllocated);
   t.deepEqual(notificationAfterPriceExceedsLimit.liquidityBalance.secondary, secondaryAmountAllocated);
+});
+
+test('initiate-stoploss-with-boundaries-outside-of-price-ratio', async (t) => {
+  const { /** @type ZoeService */ zoe,
+    /** @type XYKAMMPublicFacet */ amm,
+    /** @type IssuerKit */ centralR,
+    /** @type IssuerKit */ secondaryR,
+  } = await startServices(t);
+  const centralInitialValue = 10n;
+  const secondaryInitialValue = 20n;
+
+  /** @type XYKAMMPublicFacet */
+  const ammPublicFacet = amm.ammPublicFacet;
+
+  const { makeAmountBuilderInUnit } = t.context;
+
+  const { makeAmount: centralInUnit } = makeAmountBuilderInUnit(centralR.brand, centralR.displayInfo);
+  const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
+
+  const { /** @type Issuer */ lpTokenIssuer } = await startAmmPool(
+    t,
+    zoe,
+    ammPublicFacet,
+    centralR,
+    secondaryR,
+    'SCR',
+    centralInitialValue,
+    secondaryInitialValue,
+  );
+
+  const centralValue = 30n;
+  const secondaryValue = 60n;
+
+  const payout = await addLiquidityToPool(
+    t,
+    zoe,
+    ammPublicFacet,
+    centralR,
+    secondaryR,
+    lpTokenIssuer,
+    centralValue,
+    secondaryValue,
+  );
+
+  const { Liquidity } = payout;
+  const [lpTokenAmount, { fromCentral: fromCentralPA }] = await Promise.all([
+    E(lpTokenIssuer).getAmountOf(Liquidity),
+    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand)
+  ]);
+
+  const centralIssuer = centralR.issuer;
+  const secondaryIssuer = secondaryR.issuer;
+
+  const getBoundaries = async (
+    fromCentralPA,
+    centralAmountIn,
+    secondaryBrand,
+    boundaryMarginValue = 20n,
+  ) => {
+    const quote = await E(fromCentralPA).quoteGiven(
+      centralAmountIn,
+      secondaryBrand,
+    );
+  
+    const boundaryMarginRatio = makeRatio(boundaryMarginValue, secondaryBrand);
+    const baseAmountOut = getAmountOut(quote);
+    const marginAmount = floorMultiplyBy(baseAmountOut, boundaryMarginRatio);
+  
+    return {
+      lower: makeRatioFromAmounts(
+        AmountMath.add(baseAmountOut, marginAmount),
+        centralAmountIn,
+      ),
+      upper: makeRatioFromAmounts(
+        AmountMath.add(baseAmountOut, AmountMath.add(marginAmount, marginAmount)),
+        centralAmountIn,
+      ),
+      base: makeRatioFromAmounts(baseAmountOut, centralAmountIn),
+      marginAmount,
+    };
+  };
+
+  const boundaries = await getBoundaries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
+  trace('Boundaries', boundaries);
+
+  const terms = {
+    ammPublicFacet,
+    centralIssuer,
+    secondaryIssuer,
+    lpTokenIssuer,
+    boundaries
+  };
+
+  const issuerKeywordRecord = harden({
+    Central: centralIssuer,
+    Secondary: secondaryIssuer,
+    Liquidity: lpTokenIssuer,
+  });
+
+  const testingPromise = startStopLoss(
+    zoe,
+    issuerKeywordRecord,
+    terms,
+  );
+
+  await t.throwsAsync(() => testingPromise, {message: 'Lower boundary should be lower or equal to current price: "[194539438n]"'});
 });
