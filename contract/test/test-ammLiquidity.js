@@ -230,7 +230,7 @@ test('amm add and remove liquidity', async (t) => {
   // Allocation: central(40 - 30), liquidity(0 + 30), secondary(80-60)
   t.deepEqual(
     await E(amm.ammPublicFacet).getPoolAllocation(secondaryR.brand),
-    allocations(10n, (30n * 100n), 20n),
+    allocations(10n, 3000n, 20n),
     `poolAllocation after remove liquidity`,
   );
 });
@@ -293,3 +293,5 @@ test('amm swap secondary for central', async (t) => {
   t.log(secondaryAmount.value);
   t.log(centralAmount.value);
 });
+
+
