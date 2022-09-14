@@ -2161,12 +2161,10 @@ test('remove-liquidity-failed', async (t) => {
   });
 
   // Check balances
-  t.deepEqual(lpTokenAmountAllocated, AmountMath.makeEmpty(lpTokenBrand));
-  t.truthy(AmountMath.isGTE(centralInUnit(30n), centralAmountAllocated));
-  t.truthy(AmountMath.isGTE(secondaryAmountAllocated, secondaryInUnit(60n)));
+  t.deepEqual(lpTokenAmountAllocated, lockLpTokenBalance);
 
   // Check notification
-  t.deepEqual(notificationAfterPriceAboveUpper.phase, ALLOCATION_PHASE.REMOVED);
+  t.deepEqual(notificationAfterPriceAboveUpper.phase, ALLOCATION_PHASE.ERROR);
   t.deepEqual(lpTokenAmountAllocated, notificationAfterPriceAboveUpper.lpBalance);
   t.deepEqual(centralAmountAllocated, notificationAfterPriceAboveUpper.liquidityBalance.central);
   t.deepEqual(secondaryAmountAllocated, notificationAfterPriceAboveUpper.liquidityBalance.secondary);
