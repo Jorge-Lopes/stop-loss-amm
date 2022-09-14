@@ -232,7 +232,7 @@ const start = async (zcf) => {
     const removeLiquidityInvitation =
       E(ammPublicFacet).makeRemoveLiquidityInvitation();
 
-    const liquidityIn = stopLossSeat.getAmountAllocated(
+    const lpTokensLockedAmount = stopLossSeat.getAmountAllocated(
       'Liquidity',
       lpTokenBrand,
     );
@@ -243,7 +243,7 @@ const start = async (zcf) => {
         Secondary: AmountMath.makeEmpty(secondaryBrand),
       },
       give: {
-        Liquidity: liquidityIn,
+        Liquidity: lpTokensLockedAmount,
       },
     });
 
@@ -254,6 +254,14 @@ const start = async (zcf) => {
       proposal,
       stopLossSeat,
     );
+
+    try {
+      await E(liquiditySeat).getOfferResult();
+    } catch (error) {
+      updateAllocationState(ALLOCATION_PHASE.ERROR);
+      tracer('removeLiquidityFromAmm encounted an error: ', error);
+      return
+    }
 
     const [amounts, removeOfferResult] = await Promise.all([deposited, E(liquiditySeat).getOfferResult()]);
     tracer('Amounts from removal', amounts);

@@ -2115,8 +2115,6 @@ test('remove-liquidity-failed', async (t) => {
 
   const notifierP = E(creatorFacet).getNotifier();
   const { value: initialNotification } = await E(notifierP).getUpdateSince();
-  t.log("notifier 1 ", initialNotification)
-
   t.deepEqual(initialNotification.phase, ALLOCATION_PHASE.SCHEDULED);
 
   const lockLpTokensInvitation =
@@ -2129,12 +2127,12 @@ test('remove-liquidity-failed', async (t) => {
     proposal,
     paymentKeywordRecord,
   );
+  
   const [lockLpTokensMessage, lockLpTokenBalance, { value: notificationAfterLPLock }] = await Promise.all([
     E(lockLpTokenSeat).getOfferResult(),
     E(publicFacet).getBalanceByBrand('Liquidity', lpTokenIssuer),
     E(notifierP).getUpdateSince(),
   ]);
-  t.log("notifier 2 ", notificationAfterLPLock)
 
   t.deepEqual(lockLpTokensMessage, `LP Tokens locked in the value of ${lpTokenAmount.value}`);
   t.deepEqual(lockLpTokenBalance, lpTokenAmount); // Make sure the balance in the contract is as expected
@@ -2145,14 +2143,12 @@ test('remove-liquidity-failed', async (t) => {
   E(devPriceAuthority).setPrice(updatedPrice);
   await eventLoopIteration();
 
-  const [lpTokenAmountAllocated, lpTokenBrand, centralAmountAllocated, secondaryAmountAllocated, { value: notificationAfterPriceAboveUpper }] = await Promise.all([
+  const [lpTokenAmountAllocated, centralAmountAllocated, secondaryAmountAllocated, { value: notificationAfterPriceAboveUpper }] = await Promise.all([
     E(publicFacet).getBalanceByBrand('Liquidity', lpTokenIssuer),
-    E(lpTokenIssuer).getBrand(),
     E(publicFacet).getBalanceByBrand('Central', centralR.issuer),
     E(publicFacet).getBalanceByBrand('Secondary', secondaryR.issuer),
     E(notifierP).getUpdateSince(),
   ]);
-  t.log("notifier 3 ", notificationAfterPriceAboveUpper)
 
   trace('Balances from contract', {
     Liquidity: lpTokenAmountAllocated,
