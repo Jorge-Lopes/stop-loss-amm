@@ -260,7 +260,7 @@ test('Test lock additional LP Tokens to contract', async (t) => {
     additionalSecondaryValue,
   );
 
-  const { LpToken: additionalLpTokenPayment } = additionalPayout;
+  const { Liquidity: additionalLpTokenPayment } = additionalPayout;
   const additionalLpTokenAmount = await E(lpTokenIssuer).getAmountOf(additionalLpTokenPayment);
 
   const lockAdditionalLpTokensInvitation =
@@ -1521,7 +1521,7 @@ test('boundaryWatcher-failed-no-tokens-locked', async (t) => {
   t.deepEqual(secondaryAmountAllocated, notificationAfterBadPrice.liquidityBalance.secondary);
 });
 
-test('Test withdraw LpToken', async (t) => {
+test('withdraw-liquidity', async (t) => {
   const { /** @type ZoeService */ zoe,
     /** @type XYKAMMPublicFacet */ amm,
     /** @type IssuerKit */ centralR,
@@ -1636,7 +1636,7 @@ test('Test withdraw LpToken', async (t) => {
 
   // Check Offer result and creator seat allocation
   const withdrawLiquidityMessage = await E(withdrawSeat).getOfferResult();
-  t.deepEqual(withdrawLiquidityMessage, 'LpToken withdraw to creator seat');
+  t.deepEqual(withdrawLiquidityMessage, 'Liquidity withdraw to creator seat');
 
   const withdrawSeatAllocation = await E(withdrawSeat).getCurrentAllocationJig();
   t.deepEqual(withdrawSeatAllocation.Central, centralInUnit(30n));
@@ -1656,7 +1656,7 @@ test('Test withdraw LpToken', async (t) => {
     t.deepEqual(notificationAfterWithdraw.liquidityBalance.secondary, withdrawSecondaryBalance);
 });
 
-test('Test withdraw LP Tokens while locked', async (t) => {
+test('withdraw-locked-LpTokens ', async (t) => {
   const { /** @type ZoeService */ zoe,
     /** @type XYKAMMPublicFacet */ amm,
     /** @type IssuerKit */ centralR,
