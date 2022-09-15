@@ -404,7 +404,7 @@ test('withdraw-locked-LpTokens ', async (t) => {
 
   // Check Offer result and creator seat allocation
   t.deepEqual(withdrawLpTokenMessage, 'LP Tokens withdraw to creator seat');
-  t.deepEqual(withdrawLpSeatAllocation.LpToken.value, 3000000000n);
+  t.deepEqual(withdrawLpSeatAllocation.LpToken, lpTokenAmount);
 
   const [ withdrawLiquidityBalance,  { value: notificationAfterWithdraw }] = await Promise.all([
     E(publicFacet).getBalanceByBrand('LpToken', lpTokenIssuer),
@@ -1933,7 +1933,7 @@ test('boundaryWatcher-failed-then-remove-tokens-locked', async (t) => {
 
   // Check Offer result and creator seat allocation
   t.deepEqual(withdrawLpTokenMessage, 'LP Tokens withdraw to creator seat');
-  t.deepEqual(withdrawLpSeatAllocation.LpToken.value, 3000000000n);
+  t.deepEqual(withdrawLpSeatAllocation.LpToken, lpTokenAmount);
 
   const [ withdrawLiquidityBalance,  { value: notificationAfterWithdraw }] = await Promise.all([
     E(publicFacet).getBalanceByBrand('LpToken', lpTokenIssuer),
