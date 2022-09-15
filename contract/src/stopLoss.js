@@ -142,11 +142,8 @@ const start = async (zcf) => {
   }); // Notify user
 
   const makeLockLPTokensInvitation = () => {
-    const lockLPTokens = (creatorSeat) => {
-      assertProposalShape(creatorSeat, {
-        give: { LpToken: null },
-      });
 
+    const lockLPTokens = (creatorSeat) => {
       assertScheduledOrActive(phaseSnapshot);
 
       const {
@@ -166,21 +163,24 @@ const start = async (zcf) => {
       return `LP Tokens locked in the value of ${lpTokenAmount.value}`;
     };
 
+
+    // TODO: find the correct way to get lpTokenAmount.value for the give : ...
+    // const proposalShape = harden({
+    //   want: {},
+    //   give: {LpToken: AmountMath.make(lpTokenBrand, VALUE_???},
+    //   exit: { onDemand: null },
+    // });
+
     return zcf.makeInvitation(
       lockLPTokens,
       'Lock LP Tokens in stopLoss contract',
+      // undefined,
+      // proposalShape,
     );
   };
 
   const makeWithdrawLiquidityInvitation = () => {
     const withdrawLiquidity = async (creatorSeat) => {
-      assertProposalShape(creatorSeat, {
-        want: {
-          Central: null,
-          Secondary: null,
-        },
-      });
-
       await removeLiquidityFromAmm();
       assertAllocationStatePhase(phaseSnapshot, ALLOCATION_PHASE.REMOVED);
 
@@ -211,15 +211,25 @@ const start = async (zcf) => {
       return `Liquidity withdraw to creator seat`;
     };
 
-    return zcf.makeInvitation(withdrawLiquidity, 'withdraw Liquidity');
+    const proposalShape = harden({
+      want: {
+        Central: AmountMath.makeEmpty(centralBrand),
+        Secondary: AmountMath.makeEmpty(secondaryBrand),
+      },
+      give: {},
+      exit: { onDemand: null },
+    });
+
+    return zcf.makeInvitation(
+      withdrawLiquidity,
+      'withdraw Liquidity',
+      undefined,
+      proposalShape,
+    );
   };
 
   const makeWithdrawLpTokensInvitation = () => {
     const withdrawLpTokens = (creatorSeat) => {
-      assertProposalShape(creatorSeat, {
-        want: { LpToken: null },
-      });
-
       assertAllocationStatePhase(phaseSnapshot, ALLOCATION_PHASE.ACTIVE);
 
       const lpTokenAmountAllocated = stopLossSeat.getAmountAllocated(
@@ -240,7 +250,18 @@ const start = async (zcf) => {
       return `LP Tokens withdraw to creator seat`;
     };
 
-    return zcf.makeInvitation(withdrawLpTokens, 'withdraw Lp Tokens');
+    const proposalShape = harden({
+      want: { LpToken: AmountMath.makeEmpty(lpTokenBrand) },
+      give: {},
+      exit: { onDemand: null },
+    });
+
+    return zcf.makeInvitation(
+      withdrawLpTokens,
+      'withdraw Lp Tokens',
+      undefined,
+      proposalShape,
+    );
   };
 
   const removeLiquidityFromAmm = async () => {
@@ -323,3 +344,4 @@ const start = async (zcf) => {
 };
 harden(start);
 export { start };
+
