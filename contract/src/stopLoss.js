@@ -230,9 +230,9 @@ const start = async (zcf) => {
 
   const removeLiquidityFromAmm = async () => {
     const removeLiquidityInvitation =
-      E(ammPublicFacet).makeRemoveLiquidityInvitation();
+      await E(ammPublicFacet).makeRemoveLiquidityInvitation();
 
-    const liquidityIn = stopLossSeat.getAmountAllocated(
+    const lpTokensLockedAmount = stopLossSeat.getAmountAllocated(
       'Liquidity',
       lpTokenBrand,
     );
@@ -243,7 +243,7 @@ const start = async (zcf) => {
         Secondary: AmountMath.makeEmpty(secondaryBrand),
       },
       give: {
-        Liquidity: liquidityIn,
+        Liquidity: lpTokensLockedAmount,
       },
     });
 

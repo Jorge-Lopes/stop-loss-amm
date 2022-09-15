@@ -11,6 +11,7 @@ import {
   removeLiquidityToPool,
   startAmmPool,
   startServices,
+  swapSecondaryForCentral,
 } from './helper.js';
 
 /*
@@ -21,10 +22,10 @@ import {
 test.before(async (t) => {
   const bundleCache = await unsafeMakeBundleCache('bundles/');
 
-  const makeAllocations = (centralR, liquidityR, secondaryR) => {
+  const makeAllocations = (centralR, lpTokenR, secondaryR) => {
     const allocations = (c, l, s) => ({
       Central: AmountMath.make(centralR.brand, c * 10n ** BigInt(centralR.displayInfo.decimalPlaces)),
-      Liquidity: AmountMath.make(liquidityR.brand, l * 10n ** BigInt(liquidityR.displayInfo.decimalPlaces)),
+      Liquidity: AmountMath.make(lpTokenR.brand, l * 10n ** BigInt(lpTokenR.displayInfo.decimalPlaces)),
       Secondary: AmountMath.make(secondaryR.brand, s * 10n ** BigInt(secondaryR.displayInfo.decimalPlaces)),
     });
 
@@ -42,7 +43,7 @@ test('start amm pool', async (t) => {
   const centralInitialValue = 10n;
   const secondaryInitialValue = 20n;
 
-  const { liquidityIssuer: secondaryLiquidityIssuer } = await startAmmPool(
+  const { lpTokenIssuer } = await startAmmPool(
     t,
     zoe,
     amm.ammPublicFacet,
@@ -53,14 +54,14 @@ test('start amm pool', async (t) => {
     secondaryInitialValue,
   );
 
-  const [liquidityBrand, liquidityDisplayInfo] = await Promise.all([
-    E(secondaryLiquidityIssuer).getBrand(),
-    E(E(secondaryLiquidityIssuer).getBrand()).getDisplayInfo()
+  const [lpTokenBrand, lpTokenDisplayInfo] = await Promise.all([
+    E(lpTokenIssuer).getBrand(),
+    E(E(lpTokenIssuer).getBrand()).getDisplayInfo()
   ]);
 
-  const liquidityR = { brand: liquidityBrand, displayInfo: liquidityDisplayInfo };
+  const lpTokenR = { brand: lpTokenBrand, displayInfo: lpTokenDisplayInfo };
 
-  const allocations  = makeAllocations(centralR, liquidityR, secondaryR);
+  const allocations  = makeAllocations(centralR, lpTokenR, secondaryR);
 
   t.deepEqual(
     await E(amm.ammPublicFacet).getPoolAllocation(secondaryR.brand),
@@ -70,141 +71,153 @@ test('start amm pool', async (t) => {
 });
 
 test('amm add liquidity', async (t) => {
+  const { makeAllocations } = t.context;
   const { zoe, amm, centralR, secondaryR } = await startServices(t);
 
-  const centralInitialValue = 10_000n;
-  const secondaryInitialValue = 20_000n;
+  const centralInitialValue = 10n;
+  const secondaryInitialValue = 20n;
 
-  const { secondaryLiquidityIssuer } = await startAmmPool(
+  const { lpTokenIssuer } = await startAmmPool(
+    t,
     zoe,
-    amm,
+    amm.ammPublicFacet,
     centralR,
     secondaryR,
+    'SCR',
     centralInitialValue,
     secondaryInitialValue,
   );
 
-  const liquidityBrand = await E(secondaryLiquidityIssuer).getBrand();
+  const [lpTokenBrand, lpTokenDisplayInfo] = await Promise.all([
+    E(lpTokenIssuer).getBrand(),
+    E(E(lpTokenIssuer).getBrand()).getDisplayInfo()
+  ]);
 
-  const allocation = (c, l, s) => ({
-    Central: AmountMath.make(centralR.brand, c),
-    Liquidity: AmountMath.make(liquidityBrand, l),
-    Secondary: AmountMath.make(secondaryR.brand, s),
-  });
+  const lpTokenR = { brand: lpTokenBrand, displayInfo: lpTokenDisplayInfo };
+
+  const allocations  = makeAllocations(centralR, lpTokenR, secondaryR);
 
   t.deepEqual(
     await E(amm.ammPublicFacet).getPoolAllocation(secondaryR.brand),
-    allocation(10_000n, 0n, 20_000n),
+    allocations(10n, 0n, 20n),
     `poolAllocation after initialization`,
   );
 
-  const centralValue = 30_000n;
-  const secondaryValue = 70_000n;
+  // Add Liquidity to pool
+  const centralValue = 30n;
+  const secondaryValue = 70n;
 
   const assertPayouts = makeAssertPayouts(
     t,
-    secondaryLiquidityIssuer,
-    liquidityBrand,
+    lpTokenIssuer,
+    lpTokenBrand,
     centralR,
     secondaryR,
   );
 
   const payout = await addLiquidityToPool(
+    t,
     zoe,
-    amm,
+    amm.ammPublicFacet,
     centralR,
     secondaryR,
-    secondaryLiquidityIssuer,
+    lpTokenIssuer,
     centralValue,
     secondaryValue,
   );
 
   const { Central: c1, Liquidity: l1, Secondary: s1 } = payout;
 
-  // It will be accepted at a ratio of 1:2 = (30_000:60_000) 10_000 Secondary will be returned
-  await assertPayouts(l1, 30_000n, c1, 0n, s1, 10_000n);
+  // value is multiplied by 100000000n to be consistent with (value * 10n ** BigInt(secondaryR.displayInfo.decimalPlaces)
+  await assertPayouts(l1, (30n * 100000000n), c1, 0n, s1, (10n * 100000000n));
 
-  // The pool should now have 10K + 30K and 20K + 60K
   t.deepEqual(
     await E(amm.ammPublicFacet).getPoolAllocation(secondaryR.brand),
-    allocation(40_000n, 0n, 80_000n),
+    allocations(40n, 0n, 80n),
     `poolAllocation after add liquidity`,
   );
 });
 
 test('amm add and remove liquidity', async (t) => {
+  const { makeAllocations } = t.context;
   const { zoe, amm, centralR, secondaryR } = await startServices(t);
 
-  const centralInitialValue = 10_000n;
-  const secondaryInitialValue = 20_000n;
+  const centralInitialValue = 10n;
+  const secondaryInitialValue = 20n;
 
-  const { secondaryLiquidityIssuer } = await startAmmPool(
+  const { lpTokenIssuer } = await startAmmPool(
+    t,
     zoe,
-    amm,
+    amm.ammPublicFacet,
     centralR,
     secondaryR,
+    'SCR',
     centralInitialValue,
     secondaryInitialValue,
   );
 
-  const liquidityBrand = await E(secondaryLiquidityIssuer).getBrand();
+  const [lpTokenBrand, lpTokenDisplayInfo] = await Promise.all([
+    E(lpTokenIssuer).getBrand(),
+    E(E(lpTokenIssuer).getBrand()).getDisplayInfo()
+  ]);
 
-  const allocation = (c, l, s) => ({
-    Central: AmountMath.make(centralR.brand, c),
-    Liquidity: AmountMath.make(liquidityBrand, l),
-    Secondary: AmountMath.make(secondaryR.brand, s),
-  });
+  const lpTokenR = { brand: lpTokenBrand, displayInfo: lpTokenDisplayInfo };
+
+  const allocations  = makeAllocations(centralR, lpTokenR, secondaryR);
 
   t.deepEqual(
     await E(amm.ammPublicFacet).getPoolAllocation(secondaryR.brand),
-    allocation(10_000n, 0n, 20_000n),
+    allocations(10n, 0n, 20n),
     `poolAllocation after initialization`,
   );
 
-  const centralValue = 30_000n;
-  const secondaryValue = 70_000n;
+  // Add Liquidity to pool
+  const centralValue = 30n;
+  const secondaryValue = 70n;
 
   const assertPayouts = makeAssertPayouts(
     t,
-    secondaryLiquidityIssuer,
-    liquidityBrand,
+    lpTokenIssuer,
+    lpTokenBrand,
     centralR,
     secondaryR,
   );
 
-  const payoutAdd = await addLiquidityToPool(
+  const payout = await addLiquidityToPool(
+    t,
     zoe,
-    amm,
+    amm.ammPublicFacet,
     centralR,
     secondaryR,
-    secondaryLiquidityIssuer,
+    lpTokenIssuer,
     centralValue,
     secondaryValue,
   );
 
-  const { Central: c1, Liquidity: l1, Secondary: s1 } = payoutAdd;
+  const { Central: c1, Liquidity: l1, Secondary: s1 } = payout;
 
-  // It will be accepted at a ratio of 1:2 = (30_000:60_000) 10_000 Secondary will be returned
-  await assertPayouts(l1, 30_000n, c1, 0n, s1, 10_000n);
+  // value is multiplied by 100000000n to be consistent with (value * 10n ** BigInt(secondaryR.displayInfo.decimalPlaces)
+  await assertPayouts(l1, (30n * 100000000n), c1, 0n, s1, (10n * 100000000n));
 
-  // The pool should now have 10K + 30K and 20K + 60K
   t.deepEqual(
     await E(amm.ammPublicFacet).getPoolAllocation(secondaryR.brand),
-    allocation(40_000n, 0n, 80_000n),
+    allocations(40n, 0n, 80n),
     `poolAllocation after add liquidity`,
   );
 
   // Remove liquidity using the Liquidity tokens
 
   const liquidityPayment = l1;
-  const liquidityValue = 30_000n;
+  const liquidityAmount = await E(lpTokenIssuer).getAmountOf(liquidityPayment);
+  const liquidityValue = liquidityAmount.value
 
   const payoutRemove = removeLiquidityToPool(
+    t,
     zoe,
-    amm,
+    amm.ammPublicFacet,
     centralR,
     secondaryR,
-    secondaryLiquidityIssuer,
+    lpTokenIssuer,
     liquidityPayment,
     liquidityValue,
   );
@@ -212,52 +225,58 @@ test('amm add and remove liquidity', async (t) => {
   const { Central: c2, Liquidity: l2, Secondary: s2 } = await payoutRemove;
 
   // 30K is 3/4 of liquidity. Should get 3/4 of Central and Secondary.
-  await assertPayouts(l2, 0n, c2, 30_000n, s2, 60_000n);
+  await assertPayouts(l2, 0n, c2, (30n * 100000000n), s2, (60n * 100000000n));
 
+  // Allocation: central(40 - 30), liquidity(0 + 30), secondary(80-60)
   t.deepEqual(
     await E(amm.ammPublicFacet).getPoolAllocation(secondaryR.brand),
-    allocation(10_000n, 30_000n, 20_000n),
+    allocations(10n, 3000n, 20n),
     `poolAllocation after remove liquidity`,
   );
 });
 
 test('amm swap secondary for central', async (t) => {
+  const { makeAllocations } = t.context;
   const { zoe, amm, centralR, secondaryR } = await startServices(t);
 
-  const centralInitialValue = 10_000n;
-  const secondaryInitialValue = 20_000n;
+  const centralInitialValue = 10n;
+  const secondaryInitialValue = 20n;
 
-  const { secondaryLiquidityIssuer, payout } = await startAmmPool(
+  const { lpTokenIssuer } = await startAmmPool(
+    t,
     zoe,
-    amm,
+    amm.ammPublicFacet,
     centralR,
     secondaryR,
+    'SCR',
     centralInitialValue,
     secondaryInitialValue,
   );
 
-  const liquidityBrand = await E(secondaryLiquidityIssuer).getBrand();
+  const [lpTokenBrand, lpTokenDisplayInfo] = await Promise.all([
+    E(lpTokenIssuer).getBrand(),
+    E(E(lpTokenIssuer).getBrand()).getDisplayInfo()
+  ]);
 
-  const allocation = (c, l, s) => ({
-    Central: AmountMath.make(centralR.brand, c),
-    Liquidity: AmountMath.make(liquidityBrand, l),
-    Secondary: AmountMath.make(secondaryR.brand, s),
-  });
+  const lpTokenR = { brand: lpTokenBrand, displayInfo: lpTokenDisplayInfo };
+
+  const allocations  = makeAllocations(centralR, lpTokenR, secondaryR);
 
   t.deepEqual(
     await E(amm.ammPublicFacet).getPoolAllocation(secondaryR.brand),
-    allocation(10_000n, 0n, 20_000n),
+    allocations(10n, 0n, 20n),
     `poolAllocation after initialization`,
   );
 
-  const secondaryValueIn = 2_000n;
+  const secondaryValueIn = 2n;
 
-  const swapSeat = swap(
+  const swapSeat = swapSecondaryForCentral(
+    t,
     zoe,
-    amm,
+    amm.ammPublicFacet,
     secondaryR,
     centralR,
-    secondaryLiquidityIssuer,
+    lpTokenIssuer,
     secondaryValueIn,
   );
 
@@ -273,11 +292,6 @@ test('amm swap secondary for central', async (t) => {
 
   t.log(secondaryAmount.value);
   t.log(centralAmount.value);
-
-  /*
-    ToDo:
-    Learn how to calculate fees
-    assert that secondaryPayout and centralPayout are correct
-    assert final pool alocation
-  */
 });
+
+
