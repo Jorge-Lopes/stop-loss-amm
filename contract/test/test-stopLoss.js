@@ -2035,7 +2035,7 @@ test('initiate-stoploss-with-boundaries-outside-of-price-ratio', async (t) => {
   await t.throwsAsync(() => testingPromise, {message: 'Lower boundary should be lower or equal to current price: "[194539438n]"'});
 });
 
-test('remove-liquidity-failed', async (t) => {
+test('remove-liquidity-failed-keep-tokens-locked', async (t) => {
   const { zoe, amm, centralR, secondaryR } = await startServices(t);
   const centralInitialValue = 10n;
   const secondaryInitialValue = 20n;
