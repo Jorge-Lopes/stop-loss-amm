@@ -8,7 +8,7 @@ import {
 import { Far, E } from '@endo/far';
 import { AmountMath } from '@agoric/ertp';
 import { offerTo } from '@agoric/zoe/src/contractSupport/index.js';
-import { assertBoundaryShape, assertExecutionMode, assertAllocationStatePhase, assertScheduledOrActive, assertInitialBoundariesRange } from './assertionHelper.js';
+import { assertBoundaryShape, assertExecutionMode, assertAllocationStatePhase, assertScheduledOrActive, assertInitialBoundariesRange, assertActiveOrError } from './assertionHelper.js';
 import { makeBoundaryWatcher } from './boundaryWatcher.js';
 import { makeNotifierKit } from '@agoric/notifier';
 import { ALLOCATION_PHASE, BOUNDARY_WATCHER_STATUS } from './constants.js';
@@ -203,7 +203,7 @@ const start = async (zcf) => {
         want: {LpToken: null},
       });
 
-      assertAllocationStatePhase(phaseSnapshot, ALLOCATION_PHASE.ACTIVE);
+      assertActiveOrError(phaseSnapshot)
 
       const lpTokenAmountAllocated = stopLossSeat.getAmountAllocated(
         'LpToken',
