@@ -8,12 +8,17 @@ import {
 import { Far, E } from '@endo/far';
 import { AmountMath } from '@agoric/ertp';
 import { offerTo } from '@agoric/zoe/src/contractSupport/index.js';
-import { assertBoundaryShape, assertExecutionMode, assertAllocationStatePhase, assertScheduledOrActive, assertInitialBoundariesRange } from './assertionHelper.js';
+import {
+  assertBoundaryShape,
+  assertExecutionMode,
+  assertAllocationStatePhase,
+  assertScheduledOrActive,
+  assertInitialBoundariesRange,
+} from './assertionHelper.js';
 import { makeBoundaryWatcher } from './boundaryWatcher.js';
 import { makeNotifierKit } from '@agoric/notifier';
 import { ALLOCATION_PHASE, BOUNDARY_WATCHER_STATUS } from './constants.js';
 import { makeTracer } from '@agoric/inter-protocol/src/makeTracer.js';
-
 
 const tracer = makeTracer('StopLoss');
 
@@ -23,7 +28,7 @@ const tracer = makeTracer('StopLoss');
  */
 const start = async (zcf) => {
   const {
-    /** @type XYKAMMPublicFacet */  ammPublicFacet,
+    /** @type XYKAMMPublicFacet */ ammPublicFacet,
     /** @type Issuer */ centralIssuer,
     /** @type Issuer */ secondaryIssuer,
     /** @type Issuer */ lpTokenIssuer,
@@ -39,18 +44,20 @@ const start = async (zcf) => {
   const secondaryBrand = zcf.getBrandForIssuer(secondaryIssuer);
   const lpTokenBrand = zcf.getBrandForIssuer(lpTokenIssuer);
 
-  const getStateSnapshot = phase => {
+  const getStateSnapshot = (phase) => {
     return harden({
       phase: phase,
       lpBalance: stopLossSeat.getAmountAllocated('LpToken', lpTokenBrand),
       liquidityBalance: {
         central: stopLossSeat.getAmountAllocated('Central', centralBrand),
         secondary: stopLossSeat.getAmountAllocated('Secondary', secondaryBrand),
-      }
+      },
     });
   };
 
-  const { updater, notifier } = makeNotifierKit(getStateSnapshot(ALLOCATION_PHASE.IDLE));
+  const { updater, notifier } = makeNotifierKit(
+    getStateSnapshot(ALLOCATION_PHASE.IDLE),
+  );
 
   // phaseSnapshot used for assertAllocationStatePhase
   let phaseSnapshot = ALLOCATION_PHASE.IDLE;
@@ -59,7 +66,7 @@ const start = async (zcf) => {
     const allocationState = getStateSnapshot(allocationPhase);
     updater.updateState(allocationState);
     phaseSnapshot = allocationPhase;
-  }
+  };
 
   assertBoundaryShape(boundaries, centralBrand, secondaryBrand);
 
@@ -67,13 +74,19 @@ const start = async (zcf) => {
     let fromCentralPriceAuthority;
 
     if (ammPublicFacet) {
-      const { fromCentral } = await E(ammPublicFacet).getPriceAuthorities(secondaryBrand);
+      const { fromCentral } = await E(ammPublicFacet).getPriceAuthorities(
+        secondaryBrand,
+      );
       fromCentralPriceAuthority = fromCentral;
     } else {
       fromCentralPriceAuthority = devPriceAuthority;
     }
 
-    await isPriceInsideInitialBoundaries(fromCentralPriceAuthority, boundaries, secondaryBrand);
+    await isPriceInsideInitialBoundaries(
+      fromCentralPriceAuthority,
+      boundaries,
+      secondaryBrand,
+    );
 
     const boundaryWatcher = makeBoundaryWatcher({
       fromCentralPriceAuthority,
@@ -87,18 +100,22 @@ const start = async (zcf) => {
     return boundaryWatcher;
   };
 
-  const isPriceInsideInitialBoundaries = async (fromCentralPriceAuthority, boundaries, secondaryBrand) => {
+  const isPriceInsideInitialBoundaries = async (
+    fromCentralPriceAuthority,
+    boundaries,
+    secondaryBrand,
+  ) => {
     const amountIn = boundaries.lower.denominator;
-    const quote = await E(fromCentralPriceAuthority).quoteGiven(amountIn, secondaryBrand);
+    const quote = await E(fromCentralPriceAuthority).quoteGiven(
+      amountIn,
+      secondaryBrand,
+    );
     const quoteAmountOut = getAmountOut(quote);
-    assertInitialBoundariesRange(boundaries, quoteAmountOut)
-  }
+    assertInitialBoundariesRange(boundaries, quoteAmountOut);
+  };
 
   // Initiate listening
-  const {
-    boundaryWatcherPromise,
-    updateBoundaries,
-  } = await init();
+  const { boundaryWatcherPromise, updateBoundaries } = await init();
 
   const schedule = async () => {
     // Wait for the price boundary being violated
@@ -119,17 +136,14 @@ const start = async (zcf) => {
   };
 
   // Schedule a trigger for LP token removal
-  schedule().catch(error => {
+  schedule().catch((error) => {
     updateAllocationState(ALLOCATION_PHASE.ERROR);
     tracer('Schedule encountered an error', error);
   }); // Notify user
 
   const makeLockLPTokensInvitation = () => {
-    const lockLPTokens = (creatorSeat) => {
-      assertProposalShape(creatorSeat, {
-        give: { LpToken: null },
-      });
 
+    const lockLPTokens = (creatorSeat) => {
       assertScheduledOrActive(phaseSnapshot);
 
       const {
@@ -149,21 +163,24 @@ const start = async (zcf) => {
       return `LP Tokens locked in the value of ${lpTokenAmount.value}`;
     };
 
+
+    // TODO: find the correct way to get lpTokenAmount.value for the give : ...
+    // const proposalShape = harden({
+    //   want: {},
+    //   give: {LpToken: AmountMath.make(lpTokenBrand, VALUE_???},
+    //   exit: { onDemand: null },
+    // });
+
     return zcf.makeInvitation(
       lockLPTokens,
       'Lock LP Tokens in stopLoss contract',
+      // undefined,
+      // proposalShape,
     );
   };
 
   const makeWithdrawLiquidityInvitation = () => {
     const withdrawLiquidity = async (creatorSeat) => {
-      assertProposalShape(creatorSeat, {
-        want: {
-          Central: null,
-          Secondary: null,
-        },
-      });
-      
       await removeLiquidityFromAmm();
       assertAllocationStatePhase(phaseSnapshot, ALLOCATION_PHASE.REMOVED);
 
@@ -194,26 +211,34 @@ const start = async (zcf) => {
       return `Liquidity withdraw to creator seat`;
     };
 
-    return zcf.makeInvitation(withdrawLiquidity, 'withdraw Liquidity');
+    const proposalShape = harden({
+      want: {
+        Central: AmountMath.makeEmpty(centralBrand),
+        Secondary: AmountMath.makeEmpty(secondaryBrand),
+      },
+      give: {},
+      exit: { onDemand: null },
+    });
+
+    return zcf.makeInvitation(
+      withdrawLiquidity,
+      'withdraw Liquidity',
+      undefined,
+      proposalShape,
+    );
   };
 
   const makeWithdrawLpTokensInvitation = () => {
     const withdrawLpTokens = (creatorSeat) => {
-      assertProposalShape(creatorSeat, {
-        want: {LpToken: null},
-      });
-
       assertAllocationStatePhase(phaseSnapshot, ALLOCATION_PHASE.ACTIVE);
 
       const lpTokenAmountAllocated = stopLossSeat.getAmountAllocated(
         'LpToken',
         lpTokenBrand,
-      )
+      );
 
       creatorSeat.incrementBy(
-        stopLossSeat.decrementBy(
-          harden({LpToken: lpTokenAmountAllocated}),
-        ),
+        stopLossSeat.decrementBy(harden({ LpToken: lpTokenAmountAllocated })),
       );
 
       zcf.reallocate(creatorSeat, stopLossSeat);
@@ -225,12 +250,24 @@ const start = async (zcf) => {
       return `LP Tokens withdraw to creator seat`;
     };
 
-    return zcf.makeInvitation(withdrawLpTokens, 'withdraw Lp Tokens');
+    const proposalShape = harden({
+      want: { LpToken: AmountMath.makeEmpty(lpTokenBrand) },
+      give: {},
+      exit: { onDemand: null },
+    });
+
+    return zcf.makeInvitation(
+      withdrawLpTokens,
+      'withdraw Lp Tokens',
+      undefined,
+      proposalShape,
+    );
   };
 
   const removeLiquidityFromAmm = async () => {
-    const removeLiquidityInvitation =
-      await E(ammPublicFacet).makeRemoveLiquidityInvitation();
+    const removeLiquidityInvitation = await E(
+      ammPublicFacet,
+    ).makeRemoveLiquidityInvitation();
 
     const lpTokensLockedAmount = stopLossSeat.getAmountAllocated(
       'LpToken',
@@ -264,10 +301,13 @@ const start = async (zcf) => {
     } catch (error) {
       updateAllocationState(ALLOCATION_PHASE.ERROR);
       tracer('removeLiquidityFromAmm encounted an error: ', error);
-      return
-    };
+      return;
+    }
 
-    const [amounts, removeOfferResult] = await Promise.all([deposited, E(liquiditySeat).getOfferResult()]);
+    const [amounts, removeOfferResult] = await Promise.all([
+      deposited,
+      E(liquiditySeat).getOfferResult(),
+    ]);
     tracer('Amounts from removal', amounts);
 
     updateAllocationState(ALLOCATION_PHASE.REMOVED);
@@ -275,7 +315,7 @@ const start = async (zcf) => {
     return removeOfferResult;
   };
 
-  const updateConfiguration = async boundaries => {
+  const updateConfiguration = async (boundaries) => {
     assertScheduledOrActive(phaseSnapshot);
     return await updateBoundaries(boundaries);
   };

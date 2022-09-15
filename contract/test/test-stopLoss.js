@@ -288,7 +288,7 @@ test('lock-additional-lpTokens', async (t) => {
 
 });
 
-test('withdraw-locked-LpTokens ', async (t) => {
+test('withdraw-locked-LpTokens', async (t) => {
   const { /** @type ZoeService */ zoe,
     /** @type XYKAMMPublicFacet */ amm,
     /** @type IssuerKit */ centralR,
