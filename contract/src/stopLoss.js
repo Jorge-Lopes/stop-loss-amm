@@ -30,7 +30,7 @@ const start = async (zcf) => {
     boundaries,
     /** @type PriceAuthority */ devPriceAuthority = undefined,
   } = zcf.getTerms();
-  assertIssuerKeywords(zcf, ['Central', 'Secondary', 'Liquidity']);
+  assertIssuerKeywords(zcf, ['Central', 'Secondary', 'LpTokens']);
   assertExecutionMode(ammPublicFacet, devPriceAuthority);
 
   const { zcfSeat: stopLossSeat } = zcf.makeEmptySeatKit();
@@ -42,7 +42,7 @@ const start = async (zcf) => {
   const getStateSnapshot = phase => {
     return harden({
       phase: phase,
-      lpBalance: stopLossSeat.getAmountAllocated('Liquidity', lpTokenBrand),
+      lpBalance: stopLossSeat.getAmountAllocated('LpTokens', lpTokenBrand),
       liquidityBalance: {
         central: stopLossSeat.getAmountAllocated('Central', centralBrand),
         secondary: stopLossSeat.getAmountAllocated('Secondary', secondaryBrand),
@@ -127,17 +127,17 @@ const start = async (zcf) => {
   const makeLockLPTokensInvitation = () => {
     const lockLPTokens = (creatorSeat) => {
       assertProposalShape(creatorSeat, {
-        give: { Liquidity: null },
+        give: { LpTokens: null },
       });
 
       assertScheduledOrActive(phaseSnapshot);
 
       const {
-        give: { Liquidity: lpTokenAmount },
+        give: { LpTokens: lpTokenAmount },
       } = creatorSeat.getProposal();
 
       stopLossSeat.incrementBy(
-        creatorSeat.decrementBy(harden({ Liquidity: lpTokenAmount })),
+        creatorSeat.decrementBy(harden({ LpTokens: lpTokenAmount })),
       );
 
       zcf.reallocate(stopLossSeat, creatorSeat);
@@ -200,19 +200,19 @@ const start = async (zcf) => {
   const makeWithdrawLpTokensInvitation = () => {
     const withdrawLpTokens = (creatorSeat) => {
       assertProposalShape(creatorSeat, {
-        want: {Liquidity: null},
+        want: {LpTokens: null},
       });
 
       assertAllocationStatePhase(phaseSnapshot, ALLOCATION_PHASE.ACTIVE);
 
       const lpTokenAmountAllocated = stopLossSeat.getAmountAllocated(
-        'Liquidity',
+        'LpTokens',
         lpTokenBrand,
       )
 
       creatorSeat.incrementBy(
         stopLossSeat.decrementBy(
-          harden({Liquidity: lpTokenAmountAllocated}),
+          harden({LpTokens: lpTokenAmountAllocated}),
         ),
       );
 
@@ -233,7 +233,7 @@ const start = async (zcf) => {
       await E(ammPublicFacet).makeRemoveLiquidityInvitation();
 
     const lpTokensLockedAmount = stopLossSeat.getAmountAllocated(
-      'Liquidity',
+      'LpTokens',
       lpTokenBrand,
     );
 
@@ -243,7 +243,7 @@ const start = async (zcf) => {
         Secondary: AmountMath.makeEmpty(secondaryBrand),
       },
       give: {
-        Liquidity: lpTokensLockedAmount,
+        LpTokens: lpTokensLockedAmount,
       },
     });
 
