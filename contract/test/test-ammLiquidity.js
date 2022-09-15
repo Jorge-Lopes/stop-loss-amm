@@ -282,16 +282,6 @@ test('amm swap secondary for central', async (t) => {
 
   t.is(await E(swapSeat).getOfferResult(), 'Swap successfully completed.');
 
-  const secondaryPayout = await E(swapSeat).getPayout('In');
-  const centralPayout = await E(swapSeat).getPayout('Out');
-
-  const secondaryAmount = await E(secondaryR.issuer).getAmountOf(
-    secondaryPayout,
-  );
-  const centralAmount = await E(centralR.issuer).getAmountOf(centralPayout);
-
-  t.log(secondaryAmount.value);
-  t.log(centralAmount.value);
 });
 
 
