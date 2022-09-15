@@ -247,10 +247,14 @@ const start = async (zcf) => {
       },
     });
 
+    const keywordMapping = harden({
+      LpTokens: 'Liquidity',
+    });
+
     const { deposited, userSeatPromise: liquiditySeat } = await offerTo(
       zcf,
       removeLiquidityInvitation,
-      undefined,
+      keywordMapping,
       proposal,
       stopLossSeat,
     );
