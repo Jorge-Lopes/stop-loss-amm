@@ -8,7 +8,7 @@ import { unsafeMakeBundleCache } from '@agoric/swingset-vat/tools/bundleTool.js'
 import {
   addLiquidityToPool,
   makeAssertPayouts,
-  removeLiquidityToPool,
+  removeLiquidityFromPool,
   startAmmPool,
   startServices,
   swapSecondaryForCentral,
@@ -211,7 +211,7 @@ test('amm add and remove liquidity', async (t) => {
   const liquidityAmount = await E(lpTokenIssuer).getAmountOf(liquidityPayment);
   const liquidityValue = liquidityAmount.value
 
-  const payoutRemove = removeLiquidityToPool(
+  const payoutRemove = removeLiquidityFromPool(
     t,
     zoe,
     amm.ammPublicFacet,

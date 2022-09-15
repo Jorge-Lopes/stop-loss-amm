@@ -19,8 +19,16 @@ import {
 */
 
 export const makeAssets = () => {
-  const centralR = makeIssuerKit('Central', AssetKind.NAT, harden({ decimalPlaces: 8 }));
-  const secondaryR = makeIssuerKit('Secondary', AssetKind.NAT, harden({ decimalPlaces: 8 }));
+  const centralR = makeIssuerKit(
+    'Central',
+    AssetKind.NAT,
+    harden({ decimalPlaces: 8 }),
+  );
+  const secondaryR = makeIssuerKit(
+    'Secondary',
+    AssetKind.NAT,
+    harden({ decimalPlaces: 8 }),
+  );
 
   return { centralR, secondaryR };
 };
@@ -115,15 +123,15 @@ export async function addLiquidityToPool(
   return addLiquidity(secondaryValue, centralValue);
 }
 
-export async function removeLiquidityToPool(
+export async function removeLiquidityFromPool(
   t,
   zoe,
   ammPublicFacet,
   centralR,
   secondaryR,
   lpTokenIssuer,
-  liquidityPayment,
-  liquidityValue,
+  lpTokenPayment,
+  lpTokenValue,
 ) {
   const { removeLiquidity } = await makeLiquidityInvitations(
     t,
@@ -134,7 +142,7 @@ export async function removeLiquidityToPool(
     lpTokenIssuer,
   );
 
-  const payoutRemove = await removeLiquidity(liquidityPayment, liquidityValue);
+  const payoutRemove = await removeLiquidity(lpTokenPayment, lpTokenValue);
   return payoutRemove;
 }
 
@@ -203,7 +211,7 @@ export const makeAssertPayouts = (
       lpTokenIssuer,
       lPayment,
       lAmount,
-      'Liquidity payout',
+      'LpToken payout',
     );
     const cAmount = AmountMath.make(centralR.brand, cExpected);
     await assertPayoutAmount(
@@ -287,18 +295,24 @@ export const getBoundaries = async (
  * @param {BigInt} swapInterval
  * @returns {Promise<void>}
  */
-export const moveFromCentralPriceUp = async (zoe,
-                                             ammPublicFacet,
-                                             secondaryR,
-                                             centralR,
-                                             lpTokenIssuer,
-                                             upperBoundary,
-                                             swapInterval = 1n) => {
-  const {
-    swapSecondaryForCentral,
-    makeCentral,
-    makeSecondary,
-  } = await makeLiquidityInvitations(undefined, zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer);
+export const moveFromCentralPriceUp = async (
+  zoe,
+  ammPublicFacet,
+  secondaryR,
+  centralR,
+  lpTokenIssuer,
+  upperBoundary,
+  swapInterval = 1n,
+) => {
+  const { swapSecondaryForCentral, makeCentral, makeSecondary } =
+    await makeLiquidityInvitations(
+      undefined,
+      zoe,
+      ammPublicFacet,
+      secondaryR,
+      centralR,
+      lpTokenIssuer,
+    );
 
   const { amountOut } = await E(ammPublicFacet).getInputPrice(
     makeCentral(1n),
@@ -331,21 +345,29 @@ export const moveFromCentralPriceUp = async (zoe,
  * @param {BigInt} swapInterval
  * @returns {Promise<void>}
  */
-export const moveFromCentralPriceDown = async (zoe,
-                                               ammPublicFacet,
-                                               secondaryR,
-                                               centralR,
-                                               lpTokenIssuer,
-                                               lowerBoundary,
-                                               swapInterval = 1n) => {
+export const moveFromCentralPriceDown = async (
+  zoe,
+  ammPublicFacet,
+  secondaryR,
+  centralR,
+  lpTokenIssuer,
+  lowerBoundary,
+  swapInterval = 1n,
+) => {
+  const { swapCentralForSecondary, makeCentral, makeSecondary } =
+    await makeLiquidityInvitations(
+      undefined,
+      zoe,
+      ammPublicFacet,
+      secondaryR,
+      centralR,
+      lpTokenIssuer,
+    );
 
-  const {
-    swapCentralForSecondary,
-    makeCentral,
-    makeSecondary,
-  } = await makeLiquidityInvitations(undefined, zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer);
-
-  const { amountOut } = await E(ammPublicFacet).getInputPrice(makeCentral(1n), makeSecondary(0n));
+  const { amountOut } = await E(ammPublicFacet).getInputPrice(
+    makeCentral(1n),
+    makeSecondary(0n),
+  );
   let inputPriceAmountOut = amountOut;
 
   while (AmountMath.isGTE(inputPriceAmountOut, lowerBoundary.numerator)) {
