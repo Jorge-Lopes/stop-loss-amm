@@ -12,6 +12,7 @@ import {
   makeRatio,
   makeRatioFromAmounts,
 } from '@agoric/zoe/src/contractSupport/ratio.js';
+import { UPDATED_BOUNDARY_MESSAGE } from '../src/constants.js';
 
 /*
   This file act as a bridge beetween the tests and the functions exported by ./ammLiquidity.js,
@@ -356,4 +357,15 @@ export const moveFromCentralPriceDown = async (zoe,
   }
 
   return harden({ inputPriceAmountOut, swapInterval });
+};
+
+export const updateBoundariesAndCheckResult = async (t, zoe, stopLossCreatorFacet, newBoundaries) => {
+  const userSeat = await E(zoe).offer(
+    E(stopLossCreatorFacet).makeUpdateConfigurationInvitation(),
+    undefined,
+    undefined,
+    harden({ boundaries: newBoundaries }));
+  console.log('zaaaa')
+  const offerResult = await E(userSeat).getOfferResult();
+  t.deepEqual(offerResult, UPDATED_BOUNDARY_MESSAGE);
 };

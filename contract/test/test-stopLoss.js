@@ -11,7 +11,11 @@ import {
   startServices,
   startStopLoss,
   swapSecondaryForCentral,
-  swapCentralForSecondary, getBoundaries, moveFromCentralPriceUp, moveFromCentralPriceDown,
+  swapCentralForSecondary,
+  getBoundaries,
+  moveFromCentralPriceUp,
+  moveFromCentralPriceDown,
+  updateBoundariesAndCheckResult,
 } from './helper.js';
 import { E } from '@endo/far';
 import { makeRatioFromAmounts } from '@agoric/zoe/src/contractSupport/ratio.js';
@@ -659,8 +663,7 @@ test('update-boundaries-price-moves-below-old-lower-boundary', async (t) => {
     upper: boundaries.upper,
   };
 
-  const updateResult = await E(creatorFacet).updateConfiguration(newBoundaries  );
-  t.deepEqual(updateResult, UPDATED_BOUNDARY_MESSAGE);
+  await updateBoundariesAndCheckResult(t, zoe, creatorFacet, newBoundaries);
 
   console.log('Moving the price down...');
   const { inputPriceAmountOut: inputPriceAfter, swapInterval } =
@@ -697,6 +700,7 @@ test('update-boundaries-price-moves-below-old-lower-boundary', async (t) => {
   t.deepEqual(notificationAfterPriceExceedsLimit.lpBalance, lpTokenAmountAllocated);
   t.deepEqual(notificationAfterPriceExceedsLimit.liquidityBalance.central, centralAmountAllocated);
   t.deepEqual(notificationAfterPriceExceedsLimit.liquidityBalance.secondary, secondaryAmountAllocated);
+  t.deepEqual(notificationAfterPriceExceedsLimit.boundaries, newBoundaries);
 });
 
 test('update-boundaries-price-moves-above-old-upper-boundary', async (t) => {
@@ -810,8 +814,7 @@ test('update-boundaries-price-moves-above-old-upper-boundary', async (t) => {
     upper: makeRatioFromAmounts(AmountMath.add(boundaries.upper.numerator, updateMargin), centralInUnit(1n)),
   };
 
-  const updateResult = await E(creatorFacet).updateConfiguration(newBoundaries);
-  t.deepEqual(updateResult, UPDATED_BOUNDARY_MESSAGE);
+  await updateBoundariesAndCheckResult(t, zoe, creatorFacet, newBoundaries);
 
   console.log('Moving the price down...');
   const { inputPriceAmountOut: inputPriceAfter } =
@@ -848,6 +851,7 @@ test('update-boundaries-price-moves-above-old-upper-boundary', async (t) => {
   t.deepEqual(notificationAfterPriceExceedsLimit.lpBalance, lpTokenAmountAllocated);
   t.deepEqual(notificationAfterPriceExceedsLimit.liquidityBalance.central, centralAmountAllocated);
   t.deepEqual(notificationAfterPriceExceedsLimit.liquidityBalance.secondary, secondaryAmountAllocated);
+  t.deepEqual(notificationAfterPriceExceedsLimit.boundaries, newBoundaries);
 });
 
 test('update-boundaries-price-moves-above-old-upper-then-new-upper', async (t) => {
@@ -959,8 +963,7 @@ test('update-boundaries-price-moves-above-old-upper-then-new-upper', async (t) =
     upper: makeRatioFromAmounts(AmountMath.add(boundaries.upper.numerator, updateMargin), centralInUnit(1n)),
   };
 
-  const updateResult = await E(creatorFacet).updateConfiguration(newBoundaries  );
-  t.deepEqual(updateResult, UPDATED_BOUNDARY_MESSAGE);
+  await updateBoundariesAndCheckResult(t, zoe, creatorFacet, newBoundaries);
 
   console.log('Moving the price up...');
   const { inputPriceAmountOut: inputPriceAfter } =
@@ -998,6 +1001,7 @@ test('update-boundaries-price-moves-above-old-upper-then-new-upper', async (t) =
   t.deepEqual(notificationAfterPriceExceedsOldLimit.lpBalance, lpTokenAmountAllocated);
   t.deepEqual(notificationAfterPriceExceedsOldLimit.liquidityBalance.central, centralAmountAllocated);
   t.deepEqual(notificationAfterPriceExceedsOldLimit.liquidityBalance.secondary, secondaryAmountAllocated);
+  t.deepEqual(notificationAfterPriceExceedsOldLimit.boundaries, newBoundaries);
 
   console.log('Moving the price up...');
   const { inputPriceAmountOut: inputPriceAfterBoundariesUpdated } =
@@ -1145,8 +1149,7 @@ test('update-boundaries-price-moves-below-old-lower-then-new-lower', async (t) =
     upper: makeRatioFromAmounts(AmountMath.add(boundaries.upper.numerator, updateMargin), centralInUnit(1n)),
   };
 
-  const updateResult = await E(creatorFacet).updateConfiguration(newBoundaries  );
-  t.deepEqual(updateResult, UPDATED_BOUNDARY_MESSAGE);
+  await updateBoundariesAndCheckResult(t, zoe, creatorFacet, newBoundaries);
 
   console.log('Moving the price down...');
   const { inputPriceAmountOut: inputPriceAfter } =
@@ -1184,6 +1187,7 @@ test('update-boundaries-price-moves-below-old-lower-then-new-lower', async (t) =
   t.deepEqual(notificationAfterPriceExceedsOldLimit.lpBalance, lpTokenAmountAllocated);
   t.deepEqual(notificationAfterPriceExceedsOldLimit.liquidityBalance.central, centralAmountAllocated);
   t.deepEqual(notificationAfterPriceExceedsOldLimit.liquidityBalance.secondary, secondaryAmountAllocated);
+  t.deepEqual(notificationAfterPriceExceedsOldLimit.boundaries, newBoundaries);
 
   console.log('Moving the price down...');
   const { inputPriceAmountOut: inputPriceAfterBoundariesUpdated } =
@@ -1331,8 +1335,7 @@ test('update-boundaries-price-moves-below-old-lower-then-new-upper', async (t) =
     upper: makeRatioFromAmounts(AmountMath.add(boundaries.upper.numerator, updateMargin), centralInUnit(1n)),
   };
 
-  const updateResult = await E(creatorFacet).updateConfiguration(newBoundaries  );
-  t.deepEqual(updateResult, UPDATED_BOUNDARY_MESSAGE);
+  await updateBoundariesAndCheckResult(t, zoe, creatorFacet, newBoundaries);
 
   console.log('Moving the price down...');
   const { inputPriceAmountOut: inputPriceAfter } =
@@ -1370,6 +1373,7 @@ test('update-boundaries-price-moves-below-old-lower-then-new-upper', async (t) =
   t.deepEqual(notificationAfterPriceExceedsOldLimit.lpBalance, lpTokenAmountAllocated);
   t.deepEqual(notificationAfterPriceExceedsOldLimit.liquidityBalance.central, centralAmountAllocated);
   t.deepEqual(notificationAfterPriceExceedsOldLimit.liquidityBalance.secondary, secondaryAmountAllocated);
+  t.deepEqual(notificationAfterPriceExceedsOldLimit.boundaries, newBoundaries);
 
   console.log('Moving the price up...');
   const { inputPriceAmountOut: inputPriceAfterBoundariesUpdated } =

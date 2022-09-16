@@ -2,6 +2,7 @@ import { assert, details as X } from '@agoric/assert';
 import { assertIsRatio } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { E } from '@endo/far';
 import { makeTracer } from '@agoric/inter-protocol/src/makeTracer.js';
+import { UPDATE_BOUNDARY_STATUS } from './constants.js';
 
 const tracer = makeTracer('assertionHelper');
 
@@ -44,4 +45,18 @@ export const assertExecutionMode = (ammPublicFacet, devPriceAuthority) => {
 
 export const assertAllocationStatePhase = (phaseSnapshot, phase) => {
   assert(phaseSnapshot === phase, X`AllocationState phase should be: ${phase}`);
+};
+
+export const assertUpdateConfigOfferArgs = offerArgs => {
+  tracer('updateBoudnaryConfiguration', offerArgs);
+  assert(typeof offerArgs == 'object', '[NO_OFFER_ARGS]');
+  assert(offerArgs.hasOwnProperty('boundaries'), X`OfferArgs should include an object named 'boundaries'`);
+};
+
+/**
+ *
+ * @param {{code: number, message: string}} updateReulst
+ */
+export const assertUpdateSucceeded = updateReulst => {
+  assert(updateReulst.code === UPDATE_BOUNDARY_STATUS.SUCCESS, X`${updateReulst.message}`);
 };

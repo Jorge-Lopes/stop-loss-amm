@@ -3,6 +3,11 @@ export const BOUNDARY_WATCHER_STATUS = {
   FAIL: 2,
 };
 
+export const UPDATE_BOUNDARY_STATUS = {
+  SUCCESS: 1,
+  FAIL: 2,
+};
+
 export const UPDATED_BOUNDARY_MESSAGE = 'Successfully updated boundaries';
 
 /**
