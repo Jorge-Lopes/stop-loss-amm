@@ -404,7 +404,7 @@ test('withdraw-locked-LpTokens ', async (t) => {
 
   // Check Offer result and creator seat allocation
   t.deepEqual(withdrawLpTokenMessage, 'LP Tokens withdraw to creator seat');
-  t.deepEqual(withdrawLpSeatAllocation.LpToken.value, 3000000000n);
+  t.deepEqual(withdrawLpSeatAllocation.LpToken, lpTokenAmount);
 
   const [ withdrawLiquidityBalance,  { value: notificationAfterWithdraw }] = await Promise.all([
     E(publicFacet).getBalanceByBrand('LpToken', lpTokenIssuer),
@@ -1783,6 +1783,166 @@ test('boundaryWatcher-failed-no-tokens-locked', async (t) => {
   t.deepEqual(lpTokenAmountAllocated, notificationAfterBadPrice.lpBalance);
   t.deepEqual(centralAmountAllocated, notificationAfterBadPrice.liquidityBalance.central);
   t.deepEqual(secondaryAmountAllocated, notificationAfterBadPrice.liquidityBalance.secondary);
+});
+
+test('boundaryWatcher-failed-then-remove-tokens-locked', async (t) => {
+  const { zoe, amm, centralR, secondaryR } = await startServices(t);
+  const centralInitialValue = 10n;
+  const secondaryInitialValue = 20n;
+
+  /** @type XYKAMMPublicFacet */
+  const ammPublicFacet = amm.ammPublicFacet;
+
+  const { makeAmountBuilderInUnit } = t.context;
+
+  const { makeAmount: centralInUnit } = makeAmountBuilderInUnit(centralR.brand, centralR.displayInfo);
+  const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
+
+  const { /** @type Issuer */ lpTokenIssuer } = await startAmmPool(
+    t,
+    zoe,
+    ammPublicFacet,
+    centralR,
+    secondaryR,
+    'SCR',
+    centralInitialValue,
+    secondaryInitialValue,
+  );
+
+  const centralValue = 30n;
+  const secondaryValue = 60n;
+
+  const payout = await addLiquidityToPool(
+    t,
+    zoe,
+    ammPublicFacet,
+    centralR,
+    secondaryR,
+    lpTokenIssuer,
+    centralValue,
+    secondaryValue,
+  );
+
+  const { Liquidity: lpTokenPayment } = payout;
+  const [lpTokenAmount, { fromCentral: fromCentralPA }] = await Promise.all([
+    E(lpTokenIssuer).getAmountOf(lpTokenPayment),
+    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand)
+  ]);
+
+  const centralIssuer = centralR.issuer;
+  const secondaryIssuer = secondaryR.issuer;
+
+  const boundaries = await getBoundaries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
+  trace('Boundaries', boundaries);
+
+  const devPriceAuthority = makeManualPriceAuthority({
+    actualBrandIn: centralR.brand,
+    actualBrandOut: secondaryR.brand,
+    initialPrice: boundaries.base,
+    timer: buildManualTimer(console.log),
+  });
+
+  const terms = {
+    undefined,
+    centralIssuer,
+    secondaryIssuer,
+    lpTokenIssuer,
+    boundaries,
+    devPriceAuthority
+  };
+
+  const issuerKeywordRecord = harden({
+    Central: centralIssuer,
+    Secondary: secondaryIssuer,
+    LpToken: lpTokenIssuer,
+  });
+
+  const { creatorFacet, publicFacet } = await startStopLoss(
+    zoe,
+    issuerKeywordRecord,
+    terms,
+  );
+
+  const notifierP = E(creatorFacet).getNotifier();
+  const { value: initialNotification } = await E(notifierP).getUpdateSince();
+  t.deepEqual(initialNotification.phase, ALLOCATION_PHASE.SCHEDULED);
+
+  const lockLpTokensInvitation =
+    E(creatorFacet).makeLockLPTokensInvitation();
+  const proposal = harden({ give: { LpToken: lpTokenAmount } });
+  const paymentKeywordRecord = harden({ LpToken: lpTokenPayment });
+
+  const lockLpTokenSeat = await E(zoe).offer(
+    lockLpTokensInvitation,
+    proposal,
+    paymentKeywordRecord,
+  );
+  
+  const [lockLpTokensMessage, lockLpTokenBalance, { value: notificationAfterLPLock }] = await Promise.all([
+    E(lockLpTokenSeat).getOfferResult(),
+    E(publicFacet).getBalanceByBrand('LpToken', lpTokenIssuer),
+    E(notifierP).getUpdateSince(),
+  ]);
+
+  t.deepEqual(lockLpTokensMessage, `LP Tokens locked in the value of ${lpTokenAmount.value}`);
+  t.deepEqual(lockLpTokenBalance, lpTokenAmount); // Make sure the balance in the contract is as expected
+  t.deepEqual(notificationAfterLPLock.phase, ALLOCATION_PHASE.ACTIVE);
+
+  E(devPriceAuthority).setPrice(undefined);
+  await eventLoopIteration();
+
+  const [lpTokenAmountAllocated, lpTokenBrand, centralAmountAllocated, secondaryAmountAllocated, { value: notificationAfterBadPrice }] = await Promise.all([
+    E(publicFacet).getBalanceByBrand('LpToken', lpTokenIssuer),
+    E(lpTokenIssuer).getBrand(),
+    E(publicFacet).getBalanceByBrand('Central', centralR.issuer),
+    E(publicFacet).getBalanceByBrand('Secondary', secondaryR.issuer),
+    E(notifierP).getUpdateSince(),
+  ]);
+
+  trace('Balances from contract', {
+    LpToken: lpTokenAmountAllocated,
+    Central: centralAmountAllocated,
+    Secondary: secondaryAmountAllocated
+  });
+
+  // Check balances
+  t.deepEqual(lpTokenAmountAllocated, lpTokenAmount);
+  t.deepEqual(centralAmountAllocated, AmountMath.makeEmpty(centralR.brand));
+  t.deepEqual(secondaryAmountAllocated, AmountMath.makeEmpty(secondaryR.brand));
+
+  // Check notification
+  t.deepEqual(notificationAfterBadPrice.phase, ALLOCATION_PHASE.ERROR);
+  t.deepEqual(lpTokenAmountAllocated, notificationAfterBadPrice.lpBalance);
+  t.deepEqual(centralAmountAllocated, notificationAfterBadPrice.liquidityBalance.central);
+  t.deepEqual(secondaryAmountAllocated, notificationAfterBadPrice.liquidityBalance.secondary);
+
+  // Withdraw LP Tokens
+  const withdrawLpTokensInvitation = await E(creatorFacet).makeWithdrawLpTokensInvitation();
+  const withdrawProposal = harden({want: { LpToken: AmountMath.makeEmpty(lpTokenBrand)}});
+
+  /** @type UserSeat */
+  const withdrawLpSeat = E(zoe).offer(
+    withdrawLpTokensInvitation,
+    withdrawProposal,
+  );
+
+  const [withdrawLpTokenMessage, withdrawLpSeatAllocation] = await Promise.all([
+    E(withdrawLpSeat).getOfferResult(),
+    E(withdrawLpSeat).getCurrentAllocationJig(),
+  ]);
+
+  // Check Offer result and creator seat allocation
+  t.deepEqual(withdrawLpTokenMessage, 'LP Tokens withdraw to creator seat');
+  t.deepEqual(withdrawLpSeatAllocation.LpToken, lpTokenAmount);
+
+  const [ withdrawLiquidityBalance,  { value: notificationAfterWithdraw }] = await Promise.all([
+    E(publicFacet).getBalanceByBrand('LpToken', lpTokenIssuer),
+    E(notifierP).getUpdateSince(),
+  ]);
+
+  // Check notifier
+  t.deepEqual(notificationAfterWithdraw.phase, ALLOCATION_PHASE.WITHDRAWN);
+  t.deepEqual(notificationAfterWithdraw.lpBalance, withdrawLiquidityBalance);
 });
 
 test('update-boundaries-outside-of-price-ratio', async (t) => {

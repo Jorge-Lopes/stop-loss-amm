@@ -68,3 +68,17 @@ export const assertScheduledOrActive = (phase) => {
 
   assert(checkStatePhase(phase), X`The phase should be ACTIVE or SCHEDULED to lock tokens`);
 }
+
+export const assertActiveOrError = (phase) => {
+  const checkStatePhase = (phase) => {
+    switch (phase) {
+      case ALLOCATION_PHASE.ACTIVE:
+      case ALLOCATION_PHASE.ERROR:
+        return true;
+      default:
+        return false;
+    }
+  };
+
+  assert(checkStatePhase(phase), X`The phase should be ACTIVE or ERROR to withdraw tokens`);
+}
