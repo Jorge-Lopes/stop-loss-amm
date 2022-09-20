@@ -20,11 +20,11 @@ const addLiquidityToAMM = async homeP => {
       give: {
         Secondary: {
           pursePetname: 'Secondary Purse',
-          value: 2n ** 10n ** 8n, // 2 Secondary
+          value: 80n ** 10n ** 8n, // 2 Secondary
         },
         Central: {
           pursePetname: 'Agoric stable local currency',
-          value: 1n * 10n ** 6n, // 1 IST
+          value: 40n * 10n ** 6n, // 1 IST
         },
       },
       want: {

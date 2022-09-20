@@ -276,8 +276,16 @@ export const getBoundaries = async (
   };
 };
 
-
-
+/**
+ *
+ * @param {ZoeService} zoe
+ * @param {XYKAMMPublicFacet} ammPublicFacet
+ * @param {IssuerKit} secondaryR
+ * @param {IssuerKit} centralR
+ * @param {Issuer} lpTokenIssuer
+ * @param {Ratio} boundaryMargin
+ * @returns {Promise<string>}
+ */
 export const moveFromCentralPriceUpOneTrade = async (zoe,
                                              ammPublicFacet,
                                              secondaryR,
@@ -295,7 +303,7 @@ export const moveFromCentralPriceUpOneTrade = async (zoe,
 
   await swapSecondaryForCentral(valueInUnit);
 
-  return 'success';
+  return 'Success';
 };
 
 
@@ -327,10 +335,8 @@ export const moveFromCentralPriceDownOneTrade = async (zoe,
   const valueToTrade = tradeAmount.value / (10n ** BigInt(centralR.displayInfo.decimalPlaces));
 
   await swapCentralForSecondary(valueToTrade);
-  console.log('Value', centralAmount.value);
-  console.log('ValueToTrade', valueToTrade);
 
-  return 'success';
+  return 'Success';
 };
 
 export const updateBoundariesAndCheckResult = async (t, zoe, stopLossCreatorFacet, newBoundaries) => {

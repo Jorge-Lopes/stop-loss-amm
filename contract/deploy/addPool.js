@@ -2,7 +2,7 @@ import { makeDeployHelper } from './deployHelper.js';
 import { E } from '@endo/far';
 import dappConstants from '../dappConstants.js';
 
-const addPool = async (homeP, { bundleSource, pathResolve }) => {
+const addPool = async (homeP) => {
   const home = await homeP;
   /** @type {{zoe: ZoeService}} */
   const { zoe, agoricNames, wallet } = home;
@@ -21,11 +21,11 @@ const addPool = async (homeP, { bundleSource, pathResolve }) => {
       give: {
         Central: {
           pursePetname: 'Agoric stable local currency',
-          value: 1n * 10n ** 6n, // 1 IST
+          value: 40n * 10n ** 6n, // 1 IST
         },
         Secondary: {
           pursePetname: 'Secondary Purse',
-          value: 2n * 10n ** 8n, // 2 SCR
+          value: 80n * 10n ** 8n, // 2 SCR
         }
       },
       want: {
