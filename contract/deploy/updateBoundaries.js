@@ -2,37 +2,37 @@ import dappConstants from '../dappConstants.js';
 import { E } from '@endo/far';
 import { floorMultiplyBy, makeRatio, makeRatioFromAmounts } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { AmountMath } from '@agoric/ertp/src/amountMath.js';
+import { getBoundaries } from '../test/helper.js';
 
 const updateBoundaries = async homeP => {
   const home = await homeP;
   /** @type {{zoe: ZoeService}} */
-  const { wallet, scratch, board } = home;
+  const { wallet, scratch, board, agoricNames, zoe } = home;
 
   const { STOP_LOSS_CREATOR_FACET_SCRATCH_ID, SECONDARY_ISSUER_BOARD_ID } = dappConstants;
 
+  const ammInstanceP = E(agoricNames).lookup('instance', 'amm');
+  const istBrandP = E(agoricNames).lookup('brand', 'IST');
   const walletBridgerP = E(wallet).getBridge();
   const secondaryIssuerP = E(board).getValue(SECONDARY_ISSUER_BOARD_ID);
 
   console.log('Fetching stopLossCreatorFacet and necessary ERTP date...');
-  const [stopLossCreatorFacet, secondaryBrand] = await Promise.all([
+  const [stopLossCreatorFacet, secondaryBrand, ammPublicFacet, istBrand] = await Promise.all([
     E(scratch).get(STOP_LOSS_CREATOR_FACET_SCRATCH_ID),
     E(secondaryIssuerP).getBrand(),
+    E(zoe).getPublicFacet(ammInstanceP),
+    istBrandP
   ]);
 
+  const { fromCentral } = await E(ammPublicFacet).getPriceAuthorities(secondaryBrand);
+
   console.log('Fetching current boundaries...');
-  const notifierP = E(stopLossCreatorFacet).getNotifier();
-  const { value: { boundaries: { upper, lower } } } = await E(notifierP).getUpdateSince();
-  console.log('upper', upper)
-  console.log('lower', lower)
-  const updateMarginRatio = makeRatio(10n, secondaryBrand);
-
-  const upperBoundaryUpdateMargin = floorMultiplyBy(upper.numerator, updateMarginRatio);
-  const lowerBoundaryUpdateMargin = floorMultiplyBy(lower.numerator, updateMarginRatio);
-
+  const widerBoundaries = await getBoundaries(fromCentral,
+    AmountMath.make(istBrand, 10n ** 6n), secondaryBrand, 30n);
 
   const newBoundaries = {
-    upper: makeRatioFromAmounts(AmountMath.add(upper.numerator, upperBoundaryUpdateMargin), upper.denominator),
-    lower: makeRatioFromAmounts(AmountMath.subtract(lower.numerator, lowerBoundaryUpdateMargin), lower.denominator),
+    upper: widerBoundaries.upper,
+    lower: widerBoundaries.lower,
   };
 
   const updateBoundariesConfig = {

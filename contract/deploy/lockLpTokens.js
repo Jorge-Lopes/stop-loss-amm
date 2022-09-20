@@ -20,7 +20,7 @@ const lockLpTokens = async (homeP) => {
       give: {
         Liquidity: {
           pursePetname: 'LpToken Purse',
-          value: 10n ** 6n, // 1 unit of LP Token
+          value: 20n * 10n ** 6n, // 1 unit of LP Token
         }
       }
     },

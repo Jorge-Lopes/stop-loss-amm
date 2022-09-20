@@ -11,21 +11,24 @@ const addLiquidityToAMM = async homeP => {
 
   console.log('Fetchin ammPublicFacet...');
   /** @type XYKAMMPublicFacet */
-  const ammPublicFacet = await E(zoe).getPublicFacet(ammInstanceP);
+  const [ammPublicFacet] = await Promise.all([E(zoe).getPublicFacet(ammInstanceP)]);
+  console.log('Done', ammPublicFacet)
+  const invitation = await E(ammPublicFacet).makeAddLiquidityInvitation();
+  console.log('invitation', invitation)
 
   const addLiquidityConfig = {
     id: `${Date.now()}`,
-    invitation: E(ammPublicFacet).makeAddLiquidityInvitation(),
+    invitation,
     proposalTemplate: {
       give: {
-        Secondary: {
-          pursePetname: 'Secondary Purse',
-          value: 80n ** 10n ** 8n, // 2 Secondary
-        },
         Central: {
           pursePetname: 'Agoric stable local currency',
           value: 40n * 10n ** 6n, // 1 IST
         },
+        Secondary: {
+          pursePetname: 'Secondary Purse',
+          value: 80n * 10n ** 8n, // 2 SCR
+        }
       },
       want: {
         Liquidity: {
@@ -34,7 +37,7 @@ const addLiquidityToAMM = async homeP => {
         }
       },
     },
-  };
+  }
 
   console.log('Making an offer to add liquidity to AMM...');
   await E(walletBridgerP).addOffer(addLiquidityConfig);

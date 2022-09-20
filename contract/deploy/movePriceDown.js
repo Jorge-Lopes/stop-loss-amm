@@ -8,7 +8,7 @@ const movePriceDown = async homeP => {
   /** @type {{zoe: ZoeService}} */
   const { wallet, agoricNames, zoe, board } = home;
 
-  const TRADE_MARGIN = 10n;
+  const TRADE_MARGIN = 15n;
 
   const { SECONDARY_ISSUER_BOARD_ID } = dappConstants;
 
