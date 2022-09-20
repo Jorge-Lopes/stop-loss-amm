@@ -13,17 +13,22 @@ import {
   swapSecondaryForCentral,
   swapCentralForSecondary,
   getBoundaries,
-  moveFromCentralPriceUp,
-  moveFromCentralPriceDown,
-  updateBoundariesAndCheckResult,
+  updateBoundariesAndCheckResult, differenceInPercent, moveFromCentralPriceDownOneTrade, moveFromCentralPriceUpOneTrade,
 } from './helper.js';
 import { E } from '@endo/far';
-import { makeRatioFromAmounts } from '@agoric/zoe/src/contractSupport/ratio.js';
+import {
+  floorDivideBy,
+  floorMultiplyBy,
+  makeRatio,
+  makeRatioFromAmounts,
+  quantize,
+} from '@agoric/zoe/src/contractSupport/ratio.js';
 import { eventLoopIteration } from '@agoric/zoe/tools/eventLoopIteration.js';
 import { AmountMath } from '@agoric/ertp';
 import { ALLOCATION_PHASE, UPDATED_BOUNDARY_MESSAGE } from '../src/constants.js';
 import { makeManualPriceAuthority } from '@agoric/zoe/tools/manualPriceAuthority.js';
 import buildManualTimer from '@agoric/zoe/tools/manualTimer.js';
+import { getAmountOut } from '@agoric/zoe/src/contractSupport/priceQuote.js';
 
 const trace = makeTracer('Test-StopLoss');
 
@@ -94,7 +99,7 @@ test('Test lock LP Tokens to contract', async (t) => {
   const { Liquidity } = payout;
   const [lpTokenAmount, { fromCentral: fromCentralPA }] = await Promise.all([
     E(lpTokenIssuer).getAmountOf(Liquidity),
-    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand)
+    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand),
   ]);
 
   const centralIssuer = centralR.issuer;
@@ -108,7 +113,7 @@ test('Test lock LP Tokens to contract', async (t) => {
     centralIssuer,
     secondaryIssuer,
     lpTokenIssuer,
-    boundaries
+    boundaries,
   };
 
   const issuerKeywordRecord = harden({
@@ -194,7 +199,7 @@ test('Test lock additional LP Tokens to contract', async (t) => {
   const { Liquidity } = payout;
   const [lpTokenAmount, { fromCentral: fromCentralPA }] = await Promise.all([
     E(lpTokenIssuer).getAmountOf(Liquidity),
-    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand)
+    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand),
   ]);
 
   const centralIssuer = centralR.issuer;
@@ -208,7 +213,7 @@ test('Test lock additional LP Tokens to contract', async (t) => {
     centralIssuer,
     secondaryIssuer,
     lpTokenIssuer,
-    boundaries
+    boundaries,
   };
 
   const issuerKeywordRecord = harden({
@@ -332,7 +337,7 @@ test('trigger-lp-removal-price-moves-above-upper', async (t) => {
   const { Liquidity } = payout;
   const [lpTokenAmount, { fromCentral: fromCentralPA }] = await Promise.all([
     E(lpTokenIssuer).getAmountOf(Liquidity),
-    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand)
+    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand),
   ]);
 
   const centralIssuer = centralR.issuer;
@@ -346,7 +351,7 @@ test('trigger-lp-removal-price-moves-above-upper', async (t) => {
     centralIssuer,
     secondaryIssuer,
     lpTokenIssuer,
-    boundaries
+    boundaries,
   };
 
   const issuerKeywordRecord = harden({
@@ -386,12 +391,9 @@ test('trigger-lp-removal-price-moves-above-upper', async (t) => {
   t.deepEqual(lockLpTokenBalance, lpTokenAmount); // Make sure the balance in the contract is as expected
   t.deepEqual(notificationAfterLPLock.phase, ALLOCATION_PHASE.ACTIVE);
 
-  console.log('Moving the price up...')
-  const { inputPriceAmountOut: inputPriceAfter }  =
-    await moveFromCentralPriceUp(zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer, boundaries.upper, 2n);
-  console.log('Done.')
-
-  trace('Input price after', inputPriceAfter);
+  console.log('Moving the price up...');
+  await moveFromCentralPriceUpOneTrade(zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer, makeRatio(boundaries.boundaryMarginValue, secondaryR.brand));
+  console.log('Done.');
 
   await eventLoopIteration();
 
@@ -406,7 +408,7 @@ test('trigger-lp-removal-price-moves-above-upper', async (t) => {
   trace('Balances from contract', {
     Liquidity: lpTokenAmountAllocated,
     Central: centralAmountAllocated,
-    Secondary: secondaryAmountAllocated
+    Secondary: secondaryAmountAllocated,
   });
 
   // Check balances
@@ -466,7 +468,7 @@ test('trigger-lp-removal-price-moves-below-lower', async (t) => {
   const { Liquidity } = payout;
   const [lpTokenAmount, { fromCentral: fromCentralPA }] = await Promise.all([
     E(lpTokenIssuer).getAmountOf(Liquidity),
-    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand)
+    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand),
   ]);
 
   const centralIssuer = centralR.issuer;
@@ -480,7 +482,7 @@ test('trigger-lp-removal-price-moves-below-lower', async (t) => {
     centralIssuer,
     secondaryIssuer,
     lpTokenIssuer,
-    boundaries
+    boundaries,
   };
 
   const issuerKeywordRecord = harden({
@@ -521,10 +523,8 @@ test('trigger-lp-removal-price-moves-below-lower', async (t) => {
   t.deepEqual(notificationAfterLPLock.phase, ALLOCATION_PHASE.ACTIVE);
 
   console.log('Moving the price up...');
-  const { inputPriceAmountOut: inputPriceAfter, swapInterval } =
-    await moveFromCentralPriceDown(zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer, boundaries.lower, 1n);
+  await moveFromCentralPriceDownOneTrade(zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer, makeRatio(boundaries.boundaryMarginValue, centralR.brand));
   console.log('Done.');
-  trace('InputPriceAfter', inputPriceAfter);
 
   await eventLoopIteration();
 
@@ -599,7 +599,7 @@ test('update-boundaries-price-moves-below-old-lower-boundary', async (t) => {
   const { Liquidity } = payout;
   const [lpTokenAmount, { fromCentral: fromCentralPA }] = await Promise.all([
     E(lpTokenIssuer).getAmountOf(Liquidity),
-    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand)
+    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand),
   ]);
 
   const centralIssuer = centralR.issuer;
@@ -613,7 +613,7 @@ test('update-boundaries-price-moves-below-old-lower-boundary', async (t) => {
     centralIssuer,
     secondaryIssuer,
     lpTokenIssuer,
-    boundaries
+    boundaries,
   };
 
   const issuerKeywordRecord = harden({
@@ -653,27 +653,26 @@ test('update-boundaries-price-moves-below-old-lower-boundary', async (t) => {
   t.deepEqual(lockLpTokenBalance, lpTokenAmount); // Make sure the balance in the contract is as expected
   t.deepEqual(notificationAfterLPLock.phase, ALLOCATION_PHASE.ACTIVE);
 
-  // Move upper boundary by 0,01 Secondary
-  const updateMargin = AmountMath.make(
-    secondaryR.brand,
-    10n ** BigInt(secondaryR.displayInfo.decimalPlaces - 1)); // Update amount is 0,1 Secondary
+  const widerBoundaries = await getBoundaries(fromCentralPA, centralInUnit(1n), secondaryR.brand, 35n);
 
   const newBoundaries = {
-    lower: makeRatioFromAmounts(AmountMath.subtract(boundaries.lower.numerator, updateMargin), centralInUnit(1n)),
+    lower: widerBoundaries.lower,
     upper: boundaries.upper,
   };
 
   await updateBoundariesAndCheckResult(t, zoe, creatorFacet, newBoundaries);
 
   console.log('Moving the price down...');
-  const { inputPriceAmountOut: inputPriceAfter, swapInterval } =
-    await moveFromCentralPriceDown(zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer, boundaries.lower, 1n);
+  await moveFromCentralPriceDownOneTrade(zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer, makeRatio(boundaries.boundaryMarginValue, centralR.brand));
   console.log('Done.');
-  trace('InputPriceAfter', inputPriceAfter);
+
+  const quote = await E(fromCentralPA).quoteGiven(centralInUnit(1n), secondaryR.brand);
+  const priceAfter = getAmountOut(quote);
+  trace('PriceAfter', priceAfter);
 
   // Check price against boundaries
-  t.truthy(AmountMath.isGTE(boundaries.lower.numerator, inputPriceAfter));
-  t.truthy(AmountMath.isGTE(inputPriceAfter, newBoundaries.lower.numerator));
+  t.truthy(AmountMath.isGTE(boundaries.lower.numerator, priceAfter));
+  t.truthy(AmountMath.isGTE(priceAfter, newBoundaries.lower.numerator));
 
   await eventLoopIteration();
 
@@ -748,7 +747,7 @@ test('update-boundaries-price-moves-above-old-upper-boundary', async (t) => {
   const { Liquidity } = payout;
   const [lpTokenAmount, { fromCentral: fromCentralPA }] = await Promise.all([
     E(lpTokenIssuer).getAmountOf(Liquidity),
-    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand)
+    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand),
   ]);
 
   const centralIssuer = centralR.issuer;
@@ -762,7 +761,7 @@ test('update-boundaries-price-moves-above-old-upper-boundary', async (t) => {
     centralIssuer,
     secondaryIssuer,
     lpTokenIssuer,
-    boundaries
+    boundaries,
   };
 
   const issuerKeywordRecord = harden({
@@ -802,29 +801,27 @@ test('update-boundaries-price-moves-above-old-upper-boundary', async (t) => {
   t.deepEqual(lockLpTokenBalance, lpTokenAmount); // Make sure the balance in the contract is as expected
   t.deepEqual(notificationAfterLPLock.phase, ALLOCATION_PHASE.ACTIVE);
 
-  // Move upper boundary by 0,01 Secondary
-  const updateMargin = AmountMath.make(
-    secondaryR.brand,
-    10n ** BigInt(secondaryR.displayInfo.decimalPlaces - 1)); // Update amount is 0,1 Secondary
-
-  // newLower = (oldLower.numerator - 0,1 Secodary) / 1 Central
-  // newUpper = (oldUpper.numerator + 0,1 Secodary) / 1 Central
+  const widerBoundaries = await getBoundaries(fromCentralPA, centralInUnit(1n), secondaryR.brand, 45n);
+  trace('widerBoundaries', widerBoundaries);
   const newBoundaries = {
-    lower: makeRatioFromAmounts(AmountMath.subtract(boundaries.lower.numerator, updateMargin), centralInUnit(1n)),
-    upper: makeRatioFromAmounts(AmountMath.add(boundaries.upper.numerator, updateMargin), centralInUnit(1n)),
+    lower: boundaries.lower,
+    upper: widerBoundaries.upper,
   };
 
   await updateBoundariesAndCheckResult(t, zoe, creatorFacet, newBoundaries);
 
   console.log('Moving the price down...');
-  const { inputPriceAmountOut: inputPriceAfter } =
-    await moveFromCentralPriceUp(zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer, boundaries.upper, 2n);
+  await moveFromCentralPriceUpOneTrade(zoe, ammPublicFacet, secondaryR, centralR,
+    lpTokenIssuer, makeRatio(boundaries.boundaryMarginValue, secondaryR.brand));
   console.log('Done.');
-  trace('InputPriceAfter', inputPriceAfter);
+
+  const quoteAfter = await E(fromCentralPA).quoteGiven(centralInUnit(1n), secondaryR.brand);
+  const priceAfter = getAmountOut(quoteAfter);
+  trace('InputPriceAfter', priceAfter);
 
   // Check price against boundaries
-  t.truthy(AmountMath.isGTE(inputPriceAfter, boundaries.upper.numerator));
-  t.truthy(AmountMath.isGTE(newBoundaries.upper.numerator, inputPriceAfter));
+  t.truthy(AmountMath.isGTE(priceAfter, boundaries.upper.numerator));
+  t.truthy(AmountMath.isGTE(newBoundaries.upper.numerator, priceAfter));
 
   await eventLoopIteration();
 
@@ -899,13 +896,13 @@ test('update-boundaries-price-moves-above-old-upper-then-new-upper', async (t) =
   const { Liquidity } = payout;
   const [lpTokenAmount, { fromCentral: fromCentralPA }] = await Promise.all([
     E(lpTokenIssuer).getAmountOf(Liquidity),
-    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand)
+    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand),
   ]);
 
   const centralIssuer = centralR.issuer;
   const secondaryIssuer = secondaryR.issuer;
 
-  const boundaries = await getBoundaries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
+  const boundaries = await getBoundaries(fromCentralPA, centralInUnit(1n), secondaryR.brand, 10n);
   trace('Boundaries', boundaries);
 
   const terms = {
@@ -913,7 +910,7 @@ test('update-boundaries-price-moves-above-old-upper-then-new-upper', async (t) =
     centralIssuer,
     secondaryIssuer,
     lpTokenIssuer,
-    boundaries
+    boundaries,
   };
 
   const issuerKeywordRecord = harden({
@@ -953,27 +950,27 @@ test('update-boundaries-price-moves-above-old-upper-then-new-upper', async (t) =
   t.deepEqual(lockLpTokenBalance, lpTokenAmount); // Make sure the balance in the contract is as expected
   t.deepEqual(notificationAfterLPLock.phase, ALLOCATION_PHASE.ACTIVE);
 
-  // Move upper boundary by 0,01 Secondary
-  const updateMargin = AmountMath.make(
-    secondaryR.brand,
-    10n ** BigInt(secondaryR.displayInfo.decimalPlaces - 1)); // Update amount is 0,1 Secondary
+  const widerBoundaries = await getBoundaries(fromCentralPA, centralInUnit(1n), secondaryR.brand, 20n);
+  trace('widerBoundaries', widerBoundaries);
 
   const newBoundaries = {
-    lower: makeRatioFromAmounts(AmountMath.subtract(boundaries.lower.numerator, updateMargin), centralInUnit(1n)),
-    upper: makeRatioFromAmounts(AmountMath.add(boundaries.upper.numerator, updateMargin), centralInUnit(1n)),
+    lower: widerBoundaries.lower,
+    upper: widerBoundaries.upper,
   };
 
   await updateBoundariesAndCheckResult(t, zoe, creatorFacet, newBoundaries);
 
   console.log('Moving the price up...');
-  const { inputPriceAmountOut: inputPriceAfter } =
-    await moveFromCentralPriceUp(zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer, boundaries.upper, 1n);
+  await moveFromCentralPriceUpOneTrade(zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer, makeRatio(8n, secondaryR.brand));
   console.log('Done.');
-  trace('InputPriceAfter', inputPriceAfter);
+
+  const quoteAfterFirstTrade = await E(fromCentralPA).quoteGiven(centralInUnit(1n), secondaryR.brand);
+  const priceAfterFirstTrade = getAmountOut(quoteAfterFirstTrade);
+  trace('InputPriceAfter', priceAfterFirstTrade);
 
   // Check price against boundaries
-  t.truthy(AmountMath.isGTE(newBoundaries.upper.numerator, inputPriceAfter));
-  t.truthy(AmountMath.isGTE(inputPriceAfter, boundaries.upper.numerator));
+  t.truthy(AmountMath.isGTE(newBoundaries.upper.numerator, priceAfterFirstTrade));
+  t.truthy(AmountMath.isGTE(priceAfterFirstTrade, boundaries.upper.numerator));
 
   await eventLoopIteration();
 
@@ -1004,10 +1001,12 @@ test('update-boundaries-price-moves-above-old-upper-then-new-upper', async (t) =
   t.deepEqual(notificationAfterPriceExceedsOldLimit.boundaries, newBoundaries);
 
   console.log('Moving the price up...');
-  const { inputPriceAmountOut: inputPriceAfterBoundariesUpdated } =
-    await moveFromCentralPriceUp(zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer, newBoundaries.upper, 1n);
+  await moveFromCentralPriceUpOneTrade(zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer, makeRatio(10n, secondaryR.brand));
   console.log('Done.');
-  trace('inputPriceAfterBoundariesUpdated', inputPriceAfterBoundariesUpdated);
+
+  const quoteAfterSecondTrade = await E(fromCentralPA).quoteGiven(centralInUnit(1n), secondaryR.brand);
+  const priceAfterSecondTrade = getAmountOut(quoteAfterSecondTrade);
+  trace('inputPriceAfterBoundariesUpdated', priceAfterSecondTrade);
 
   await eventLoopIteration();
 
@@ -1085,13 +1084,13 @@ test('update-boundaries-price-moves-below-old-lower-then-new-lower', async (t) =
   const { Liquidity } = payout;
   const [lpTokenAmount, { fromCentral: fromCentralPA }] = await Promise.all([
     E(lpTokenIssuer).getAmountOf(Liquidity),
-    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand)
+    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand),
   ]);
 
   const centralIssuer = centralR.issuer;
   const secondaryIssuer = secondaryR.issuer;
 
-  const boundaries = await getBoundaries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
+  const boundaries = await getBoundaries(fromCentralPA, centralInUnit(1n), secondaryR.brand, 10n);
   trace('Boundaries', boundaries);
 
   const terms = {
@@ -1099,7 +1098,7 @@ test('update-boundaries-price-moves-below-old-lower-then-new-lower', async (t) =
     centralIssuer,
     secondaryIssuer,
     lpTokenIssuer,
-    boundaries
+    boundaries,
   };
 
   const issuerKeywordRecord = harden({
@@ -1139,27 +1138,27 @@ test('update-boundaries-price-moves-below-old-lower-then-new-lower', async (t) =
   t.deepEqual(lockLpTokenBalance, lpTokenAmount); // Make sure the balance in the contract is as expected
   t.deepEqual(notificationAfterLPLock.phase, ALLOCATION_PHASE.ACTIVE);
 
-  // Move upper boundary by 0,01 Secondary
-  const updateMargin = AmountMath.make(
-    secondaryR.brand,
-    10n ** BigInt(secondaryR.displayInfo.decimalPlaces - 1)); // Update amount is 0,1 Secondary
+  const widerBoundaries = await getBoundaries(fromCentralPA, centralInUnit(1n), secondaryR.brand, 20n);
+  trace('widerBoundaries', widerBoundaries);
 
   const newBoundaries = {
-    lower: makeRatioFromAmounts(AmountMath.subtract(boundaries.lower.numerator, updateMargin), centralInUnit(1n)),
-    upper: makeRatioFromAmounts(AmountMath.add(boundaries.upper.numerator, updateMargin), centralInUnit(1n)),
+    lower: widerBoundaries.lower,
+    upper: widerBoundaries.upper,
   };
 
   await updateBoundariesAndCheckResult(t, zoe, creatorFacet, newBoundaries);
 
   console.log('Moving the price down...');
-  const { inputPriceAmountOut: inputPriceAfter } =
-    await moveFromCentralPriceDown(zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer, boundaries.lower, 1n);
+  await moveFromCentralPriceDownOneTrade(zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer, makeRatio(10n, centralR.brand));
   console.log('Done.');
-  trace('InputPriceAfter', inputPriceAfter);
+
+  const quoteAfterFirstTrade = await E(fromCentralPA).quoteGiven(centralInUnit(1n), secondaryR.brand);
+  const priceAfterFirstTrade = getAmountOut(quoteAfterFirstTrade);
+  trace('priceAfterFirstTrade', priceAfterFirstTrade);
 
   // Check price against boundaries
-  t.truthy(AmountMath.isGTE(boundaries.lower.numerator, inputPriceAfter));
-  t.truthy(AmountMath.isGTE(inputPriceAfter, newBoundaries.lower.numerator));
+  t.truthy(AmountMath.isGTE(boundaries.lower.numerator, priceAfterFirstTrade));
+  t.truthy(AmountMath.isGTE(priceAfterFirstTrade, newBoundaries.lower.numerator));
 
   await eventLoopIteration();
 
@@ -1190,10 +1189,12 @@ test('update-boundaries-price-moves-below-old-lower-then-new-lower', async (t) =
   t.deepEqual(notificationAfterPriceExceedsOldLimit.boundaries, newBoundaries);
 
   console.log('Moving the price down...');
-  const { inputPriceAmountOut: inputPriceAfterBoundariesUpdated } =
-    await moveFromCentralPriceDown(zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer, newBoundaries.lower, 1n);
+  await moveFromCentralPriceDownOneTrade(zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer, makeRatio(15n, centralR.brand));
   console.log('Done.');
-  trace('inputPriceAfterBoundariesUpdated', inputPriceAfterBoundariesUpdated);
+
+  const quoteAfterSecondTrade = await E(fromCentralPA).quoteGiven(centralInUnit(1n), secondaryR.brand);
+  const priceAfterSecondTrade = getAmountOut(quoteAfterSecondTrade);
+  trace('priceAfterSecondTrade', priceAfterSecondTrade);
 
   await eventLoopIteration();
 
@@ -1271,13 +1272,13 @@ test('update-boundaries-price-moves-below-old-lower-then-new-upper', async (t) =
   const { Liquidity } = payout;
   const [lpTokenAmount, { fromCentral: fromCentralPA }] = await Promise.all([
     E(lpTokenIssuer).getAmountOf(Liquidity),
-    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand)
+    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand),
   ]);
 
   const centralIssuer = centralR.issuer;
   const secondaryIssuer = secondaryR.issuer;
 
-  const boundaries = await getBoundaries(fromCentralPA, centralInUnit(1n), secondaryR.brand);
+  const boundaries = await getBoundaries(fromCentralPA, centralInUnit(1n), secondaryR.brand, 15n);
   trace('Boundaries', boundaries);
 
   const terms = {
@@ -1285,7 +1286,7 @@ test('update-boundaries-price-moves-below-old-lower-then-new-upper', async (t) =
     centralIssuer,
     secondaryIssuer,
     lpTokenIssuer,
-    boundaries
+    boundaries,
   };
 
   const issuerKeywordRecord = harden({
@@ -1325,27 +1326,27 @@ test('update-boundaries-price-moves-below-old-lower-then-new-upper', async (t) =
   t.deepEqual(lockLpTokenBalance, lpTokenAmount); // Make sure the balance in the contract is as expected
   t.deepEqual(notificationAfterLPLock.phase, ALLOCATION_PHASE.ACTIVE);
 
-  // Move upper boundary by 0,01 Secondary
-  const updateMargin = AmountMath.make(
-    secondaryR.brand,
-    10n ** BigInt(secondaryR.displayInfo.decimalPlaces - 1)); // Update amount is 0,1 Secondary
+  const widerBoundaries = await getBoundaries(fromCentralPA, centralInUnit(1n), secondaryR.brand, 40n);
+  trace('widerBoundaries', widerBoundaries);
 
   const newBoundaries = {
-    lower: makeRatioFromAmounts(AmountMath.subtract(boundaries.lower.numerator, updateMargin), centralInUnit(1n)),
-    upper: makeRatioFromAmounts(AmountMath.add(boundaries.upper.numerator, updateMargin), centralInUnit(1n)),
+    lower: widerBoundaries.lower,
+    upper: widerBoundaries.upper,
   };
 
   await updateBoundariesAndCheckResult(t, zoe, creatorFacet, newBoundaries);
 
   console.log('Moving the price down...');
-  const { inputPriceAmountOut: inputPriceAfter } =
-    await moveFromCentralPriceDown(zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer, boundaries.lower, 1n);
+  await moveFromCentralPriceDownOneTrade(zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer, makeRatio(10n, centralR.brand));
   console.log('Done.');
-  trace('InputPriceAfter', inputPriceAfter);
+
+  const quoteAfterFirstTrade = await E(fromCentralPA).quoteGiven(centralInUnit(1n), secondaryR.brand);
+  const priceAfterFirstTrade = getAmountOut(quoteAfterFirstTrade);
+  trace('priceAfterFirstTrade', priceAfterFirstTrade);
 
   // Check price against boundaries
-  t.truthy(AmountMath.isGTE(boundaries.lower.numerator, inputPriceAfter));
-  t.truthy(AmountMath.isGTE(inputPriceAfter, newBoundaries.lower.numerator));
+  t.truthy(AmountMath.isGTE(boundaries.lower.numerator, priceAfterFirstTrade));
+  t.truthy(AmountMath.isGTE(priceAfterFirstTrade, newBoundaries.lower.numerator));
 
   await eventLoopIteration();
 
@@ -1376,10 +1377,12 @@ test('update-boundaries-price-moves-below-old-lower-then-new-upper', async (t) =
   t.deepEqual(notificationAfterPriceExceedsOldLimit.boundaries, newBoundaries);
 
   console.log('Moving the price up...');
-  const { inputPriceAmountOut: inputPriceAfterBoundariesUpdated } =
-    await moveFromCentralPriceUp(zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer, newBoundaries.upper, 1n);
+  await moveFromCentralPriceUpOneTrade(zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer, makeRatio(35n, secondaryR.brand));
   console.log('Done.');
-  trace('inputPriceAfterBoundariesUpdated', inputPriceAfterBoundariesUpdated);
+
+  const quoteAfterSecondTrade = await E(fromCentralPA).quoteGiven(centralInUnit(1n), secondaryR.brand);
+  const priceAfterSecondTrade = getAmountOut(quoteAfterSecondTrade);
+  trace('priceAfterSecondTrade', priceAfterSecondTrade);
 
   await eventLoopIteration();
 
@@ -1453,7 +1456,7 @@ test('boundaryWatcher-failed-no-tokens-locked', async (t) => {
   const { Liquidity } = payout;
   const [_, { fromCentral: fromCentralPA }] = await Promise.all([
     E(lpTokenIssuer).getAmountOf(Liquidity),
-    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand)
+    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand),
   ]);
 
   const centralIssuer = centralR.issuer;
@@ -1475,7 +1478,7 @@ test('boundaryWatcher-failed-no-tokens-locked', async (t) => {
     secondaryIssuer,
     lpTokenIssuer,
     boundaries,
-    devPriceAuthority
+    devPriceAuthority,
   };
 
   const issuerKeywordRecord = harden({
@@ -1509,7 +1512,7 @@ test('boundaryWatcher-failed-no-tokens-locked', async (t) => {
   trace('Balances from contract', {
     Liquidity: lpTokenAmountAllocated,
     Central: centralAmountAllocated,
-    Secondary: secondaryAmountAllocated
+    Secondary: secondaryAmountAllocated,
   });
 
   // Check balances
@@ -1569,7 +1572,7 @@ test('Test withdraw Liquidity', async (t) => {
   const { Liquidity } = payout;
   const [lpTokenAmount, { fromCentral: fromCentralPA }] = await Promise.all([
     E(lpTokenIssuer).getAmountOf(Liquidity),
-    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand)
+    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand),
   ]);
 
   const centralIssuer = centralR.issuer;
@@ -1582,7 +1585,7 @@ test('Test withdraw Liquidity', async (t) => {
     centralIssuer,
     secondaryIssuer,
     lpTokenIssuer,
-    boundaries
+    boundaries,
   };
 
   const issuerKeywordRecord = harden({
@@ -1643,20 +1646,20 @@ test('Test withdraw Liquidity', async (t) => {
 
   const withdrawSeatAllocation = await E(withdrawSeat).getCurrentAllocationJig();
   t.deepEqual(withdrawSeatAllocation.Central, centralInUnit(30n));
-  t.deepEqual(withdrawSeatAllocation.Secondary, secondaryInUnit(60n))
+  t.deepEqual(withdrawSeatAllocation.Secondary, secondaryInUnit(60n));
 
-  const [withdrawCentralBalance, withdrawSecondaryBalance, withdrawLiquidityBalance,  { value: notificationAfterWithdraw }] = await Promise.all([
+  const [withdrawCentralBalance, withdrawSecondaryBalance, withdrawLiquidityBalance, { value: notificationAfterWithdraw }] = await Promise.all([
     E(publicFacet).getBalanceByBrand('Central', centralIssuer),
     E(publicFacet).getBalanceByBrand('Secondary', secondaryIssuer),
     E(publicFacet).getBalanceByBrand('Liquidity', lpTokenIssuer),
     E(notfierP).getUpdateSince(),
   ]);
 
-    // Check notifier
-    t.deepEqual(notificationAfterWithdraw.phase, ALLOCATION_PHASE.WITHDRAWN);
-    t.deepEqual(notificationAfterWithdraw.lpBalance, withdrawLiquidityBalance);
-    t.deepEqual(notificationAfterWithdraw.liquidityBalance.central, withdrawCentralBalance);
-    t.deepEqual(notificationAfterWithdraw.liquidityBalance.secondary, withdrawSecondaryBalance);
+  // Check notifier
+  t.deepEqual(notificationAfterWithdraw.phase, ALLOCATION_PHASE.WITHDRAWN);
+  t.deepEqual(notificationAfterWithdraw.lpBalance, withdrawLiquidityBalance);
+  t.deepEqual(notificationAfterWithdraw.liquidityBalance.central, withdrawCentralBalance);
+  t.deepEqual(notificationAfterWithdraw.liquidityBalance.secondary, withdrawSecondaryBalance);
 });
 
 test('Test withdraw LP Tokens while locked', async (t) => {
@@ -1704,7 +1707,7 @@ test('Test withdraw LP Tokens while locked', async (t) => {
   const { Liquidity } = payout;
   const [lpTokenAmount, { fromCentral: fromCentralPA }] = await Promise.all([
     E(lpTokenIssuer).getAmountOf(Liquidity),
-    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand)
+    E(ammPublicFacet).getPriceAuthorities(secondaryR.brand),
   ]);
 
   const centralIssuer = centralR.issuer;
@@ -1717,7 +1720,7 @@ test('Test withdraw LP Tokens while locked', async (t) => {
     centralIssuer,
     secondaryIssuer,
     lpTokenIssuer,
-    boundaries
+    boundaries,
   };
 
   const issuerKeywordRecord = harden({
@@ -1760,7 +1763,7 @@ test('Test withdraw LP Tokens while locked', async (t) => {
   const lpTokenBrand = await E(lpTokenIssuer).getBrand();
 
   const withdrawLpTokensInvitation = await E(creatorFacet).makeWithdrawLpTokensInvitation();
-  const withdrawProposal = harden({want: { Liquidity: AmountMath.makeEmpty(lpTokenBrand)}});
+  const withdrawProposal = harden({ want: { Liquidity: AmountMath.makeEmpty(lpTokenBrand) } });
 
   /** @type UserSeat */
   const withdrawLpSeat = E(zoe).offer(
@@ -1777,7 +1780,7 @@ test('Test withdraw LP Tokens while locked', async (t) => {
   t.deepEqual(withdrawLpTokenMessage, 'LP Tokens withdraw to creator seat');
   t.deepEqual(withdrawLpSeatAllocation.Liquidity.value, 3000000000n);
 
-  const [ withdrawLiquidityBalance,  { value: notificationAfterWithdraw }] = await Promise.all([
+  const [withdrawLiquidityBalance, { value: notificationAfterWithdraw }] = await Promise.all([
     E(publicFacet).getBalanceByBrand('Liquidity', lpTokenIssuer),
     E(notfierP).getUpdateSince(),
   ]);
@@ -1786,8 +1789,90 @@ test('Test withdraw LP Tokens while locked', async (t) => {
   t.deepEqual(notificationAfterWithdraw.phase, ALLOCATION_PHASE.WITHDRAWN);
   t.deepEqual(notificationAfterWithdraw.lpBalance, withdrawLiquidityBalance);
 
+});
 
+test('amm-playaround-secondary-price-down', async (t) => {
+  const { zoe, amm, centralR, secondaryR } = await startServices(t);
+  const centralInitialValue = 40n;
+  const secondaryInitialValue = 80n;
 
+  /** @type XYKAMMPublicFacet */
+  const ammPublicFacet = amm.ammPublicFacet;
 
+  const { makeAmountBuilderInUnit } = t.context;
 
+  const { makeAmount: centralInUnit } = makeAmountBuilderInUnit(centralR.brand, centralR.displayInfo);
+  const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
+
+  const { /** @type Issuer */ lpTokenIssuer } = await startAmmPool(
+    t,
+    zoe,
+    ammPublicFacet,
+    centralR,
+    secondaryR,
+    'SCR',
+    centralInitialValue,
+    secondaryInitialValue,
+  );
+
+  /** @type {{fromCentral: PriceAuthority}} */
+  const { fromCentral } = await E(ammPublicFacet).getPriceAuthorities(secondaryR.brand);
+
+  const quoteBefore = await E(fromCentral).quoteGiven(centralInUnit(1n), secondaryR.brand);
+  trace('Price Before', getAmountOut(quoteBefore));
+
+  console.log('Swapping Central For Secondary...');
+  await moveFromCentralPriceDownOneTrade(zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer, makeRatio(15n, centralR.brand));
+  console.log('Done.');
+
+  const quoteAfter = await E(fromCentral).quoteGiven(centralInUnit(1n), secondaryR.brand);
+  trace('Price After First Trade', getAmountOut(quoteAfter));
+
+  const firstDifference = differenceInPercent(getAmountOut(quoteAfter), getAmountOut(quoteBefore));
+  trace('Quantized After First Trade', firstDifference);
+
+  t.is('test', 'test');
+});
+
+test('amm-playaround-secondary-price-up', async (t) => {
+  const { zoe, amm, centralR, secondaryR } = await startServices(t);
+  const centralInitialValue = 40n;
+  const secondaryInitialValue = 80n;
+
+  /** @type XYKAMMPublicFacet */
+  const ammPublicFacet = amm.ammPublicFacet;
+
+  const { makeAmountBuilderInUnit } = t.context;
+
+  const { makeAmount: centralInUnit } = makeAmountBuilderInUnit(centralR.brand, centralR.displayInfo);
+  const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
+
+  const { /** @type Issuer */ lpTokenIssuer } = await startAmmPool(
+    t,
+    zoe,
+    ammPublicFacet,
+    centralR,
+    secondaryR,
+    'SCR',
+    centralInitialValue,
+    secondaryInitialValue,
+  );
+
+  /** @type {{fromCentral: PriceAuthority}} */
+  const { fromCentral } = await E(ammPublicFacet).getPriceAuthorities(secondaryR.brand);
+
+  const quoteBefore = await E(fromCentral).quoteGiven(centralInUnit(1n), secondaryR.brand);
+  trace('Price Before', getAmountOut(quoteBefore));
+
+  console.log('Swapping Central For Secondary...');
+  await moveFromCentralPriceUpOneTrade(zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer, makeRatio(20n, secondaryR.brand));
+  console.log('Done.');
+
+  const quoteAfter = await E(fromCentral).quoteGiven(centralInUnit(1n), secondaryR.brand);
+  trace('Price After First Trade', getAmountOut(quoteAfter));
+
+  const firstDifference = differenceInPercent(getAmountOut(quoteAfter), getAmountOut(quoteBefore));
+  trace('Quantized After First Trade', firstDifference);
+
+  t.is('test', 'test');
 });

@@ -10,7 +10,7 @@ import { getAmountOut } from '@agoric/zoe/src/contractSupport/priceQuote.js';
 import {
   floorMultiplyBy,
   makeRatio,
-  makeRatioFromAmounts,
+  makeRatioFromAmounts, quantize,
 } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { UPDATED_BOUNDARY_MESSAGE } from '../src/constants.js';
 
@@ -148,6 +148,7 @@ export async function swapSecondaryForCentral(
   secondaryValueIn,
 ) {
   const { swapSecondaryForCentral } = await makeLiquidityInvitations(
+    undefined,
     zoe,
     ammPublicFacet,
     secondaryR,
@@ -168,6 +169,7 @@ export async function swapCentralForSecondary(
   centralValueIn,
 ) {
   const { swapCentralForSecondary } = await makeLiquidityInvitations(
+    undefined,
     zoe,
     ammPublicFacet,
     secondaryR,
@@ -270,52 +272,32 @@ export const getBoundaries = async (
     ),
     base: makeRatioFromAmounts(baseAmountOut, centralAmountIn),
     marginAmount,
+    boundaryMarginValue,
   };
 };
 
-/**
- *
- * @param {ZoeService} zoe
- * @param {XYKAMMPublicFacet} ammPublicFacet
- * @param {IssuerKit} secondaryR
- * @param {IssuerKit} centralR
- * @param {Issuer} lpTokenIssuer
- * @param {Ratio} upperBoundary
- * @param {BigInt} swapInterval
- * @returns {Promise<void>}
- */
-export const moveFromCentralPriceUp = async (zoe,
+
+
+export const moveFromCentralPriceUpOneTrade = async (zoe,
                                              ammPublicFacet,
                                              secondaryR,
                                              centralR,
                                              lpTokenIssuer,
-                                             upperBoundary,
-                                             swapInterval = 1n) => {
+                                             boundaryMargin) => {
   const {
     swapSecondaryForCentral,
-    makeCentral,
-    makeSecondary,
   } = await makeLiquidityInvitations(undefined, zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer);
 
-  const { amountOut } = await E(ammPublicFacet).getInputPrice(
-    makeCentral(1n),
-    makeSecondary(0n),
-  );
-  let inputPriceAmountOut = amountOut;
+  const { Secondary: secondaryAmount } = await E(ammPublicFacet).getPoolAllocation(secondaryR.brand);
 
-  while (AmountMath.isGTE(upperBoundary.numerator, inputPriceAmountOut)) {
-    await swapSecondaryForCentral(swapInterval);
+  const tradeAmount = floorMultiplyBy(secondaryAmount, boundaryMargin);
+  const valueInUnit = tradeAmount.value / (10n ** BigInt(secondaryR.displayInfo.decimalPlaces));
 
-    const { amountOut } = await E(ammPublicFacet).getInputPrice(
-      makeCentral(1n),
-      makeSecondary(0n),
-    );
-    inputPriceAmountOut = amountOut;
-    // console.log('INTER_INPUT_PRICE', inputPriceAmountOut);
-  }
+  await swapSecondaryForCentral(valueInUnit);
 
-  return harden({ inputPriceAmountOut, swapInterval });
+  return 'success';
 };
+
 
 /**
  *
@@ -324,39 +306,31 @@ export const moveFromCentralPriceUp = async (zoe,
  * @param {IssuerKit} secondaryR
  * @param {IssuerKit} centralR
  * @param {Issuer} lpTokenIssuer
- * @param {Ratio} lowerBoundary
- * @param {BigInt} swapInterval
+ * @param {Ratio} boundaryMargin
  * @returns {Promise<void>}
  */
-export const moveFromCentralPriceDown = async (zoe,
+export const moveFromCentralPriceDownOneTrade = async (zoe,
                                                ammPublicFacet,
                                                secondaryR,
                                                centralR,
                                                lpTokenIssuer,
-                                               lowerBoundary,
-                                               swapInterval = 1n) => {
+                                               boundaryMargin) => {
 
   const {
     swapCentralForSecondary,
-    makeCentral,
-    makeSecondary,
   } = await makeLiquidityInvitations(undefined, zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer);
 
-  const { amountOut } = await E(ammPublicFacet).getInputPrice(makeCentral(1n), makeSecondary(0n));
-  let inputPriceAmountOut = amountOut;
+  const { Central: centralAmount } = await E(ammPublicFacet).getPoolAllocation(secondaryR.brand);
 
-  while (AmountMath.isGTE(inputPriceAmountOut, lowerBoundary.numerator)) {
-    await swapCentralForSecondary(swapInterval);
+  const tradeAmount = floorMultiplyBy(centralAmount, boundaryMargin);
 
-    const { amountOut } = await E(ammPublicFacet).getInputPrice(
-      makeCentral(1n),
-      makeSecondary(0n),
-    );
-    inputPriceAmountOut = amountOut;
-    // console.log('INTER_INPUT_PRICE', inputPriceAmountOut);
-  }
+  const valueToTrade = tradeAmount.value / (10n ** BigInt(centralR.displayInfo.decimalPlaces));
 
-  return harden({ inputPriceAmountOut, swapInterval });
+  await swapCentralForSecondary(valueToTrade);
+  console.log('Value', centralAmount.value);
+  console.log('ValueToTrade', valueToTrade);
+
+  return 'success';
 };
 
 export const updateBoundariesAndCheckResult = async (t, zoe, stopLossCreatorFacet, newBoundaries) => {
@@ -369,3 +343,18 @@ export const updateBoundariesAndCheckResult = async (t, zoe, stopLossCreatorFace
   const offerResult = await E(userSeat).getOfferResult();
   t.deepEqual(offerResult, UPDATED_BOUNDARY_MESSAGE);
 };
+
+/**
+ *
+ * @param {Amount} newPrice
+ * @param {Amount} oldPrice
+ * @returns {Ratio}
+ */
+export const differenceInPercent = (newPrice, oldPrice) => {
+  let subtractInVal = newPrice.value - oldPrice.value;
+  if (subtractInVal < 0n) subtractInVal = -1n * subtractInVal;
+  const subtractedAmount = AmountMath.make(newPrice.brand, subtractInVal);
+  console.log('difference', subtractedAmount)
+  const ratio = makeRatioFromAmounts(subtractedAmount, oldPrice);
+  return quantize(ratio, 100n);
+}
