@@ -8,12 +8,7 @@ import {
 import { Far, E } from '@endo/far';
 import { AmountMath } from '@agoric/ertp';
 import { offerTo } from '@agoric/zoe/src/contractSupport/index.js';
-import {
-  assertBoundaryShape,
-  assertExecutionMode,
-  assertAllocationStatePhase,
-  assertUpdateConfigOfferArgs, assertUpdateSucceeded,
-} from './assertionHelper.js';
+import { assertBoundaryShape, assertExecutionMode, assertAllocationStatePhase, assertScheduledOrActive, assertInitialBoundariesRange, assertActiveOrError, assertUpdateConfigOfferArgs, assertUpdateSucceeded } from './assertionHelper.js';
 import { makeBoundaryWatcher } from './boundaryWatcher.js';
 import { makeNotifierKit } from '@agoric/notifier';
 import { ALLOCATION_PHASE, BOUNDARY_WATCHER_STATUS, UPDATED_BOUNDARY_MESSAGE } from './constants.js';
@@ -35,7 +30,7 @@ const start = async (zcf) => {
     boundaries,
     /** @type PriceAuthority */ devPriceAuthority = undefined,
   } = zcf.getTerms();
-  assertIssuerKeywords(zcf, ['Central', 'Secondary', 'Liquidity']);
+  assertIssuerKeywords(zcf, ['Central', 'Secondary', 'LpToken']);
   assertExecutionMode(ammPublicFacet, devPriceAuthority);
 
   const { zcfSeat: stopLossSeat } = zcf.makeEmptySeatKit();
@@ -51,7 +46,7 @@ const start = async (zcf) => {
   const getStateSnapshot = phase => {
     return harden({
       phase: phase,
-      lpBalance: stopLossSeat.getAmountAllocated('Liquidity', lpTokenBrand),
+      lpBalance: stopLossSeat.getAmountAllocated('LpToken', lpTokenBrand),
       liquidityBalance: {
         central: stopLossSeat.getAmountAllocated('Central', centralBrand),
         secondary: stopLossSeat.getAmountAllocated('Secondary', secondaryBrand),
@@ -81,6 +76,8 @@ const start = async (zcf) => {
       fromCentralPriceAuthority = devPriceAuthority;
     }
 
+    await isPriceInsideInitialBoundaries(fromCentralPriceAuthority, boundaries, secondaryBrand);
+
     const boundaryWatcher = makeBoundaryWatcher({
       fromCentralPriceAuthority,
       boundaries,
@@ -92,6 +89,13 @@ const start = async (zcf) => {
 
     return boundaryWatcher;
   };
+
+  const isPriceInsideInitialBoundaries = async (fromCentralPriceAuthority, boundaries, secondaryBrand) => {
+    const amountIn = boundaries.lower.denominator;
+    const quote = await E(fromCentralPriceAuthority).quoteGiven(amountIn, secondaryBrand);
+    const quoteAmountOut = getAmountOut(quote);
+    assertInitialBoundariesRange(boundaries, quoteAmountOut)
+  }
 
   // Initiate listening
   const {
@@ -126,23 +130,17 @@ const start = async (zcf) => {
   const makeLockLPTokensInvitation = () => {
     const lockLPTokens = (creatorSeat) => {
       assertProposalShape(creatorSeat, {
-        give: { Liquidity: null },
+        give: { LpToken: null },
       });
 
-      //TODO: refractor the next condition
-      const lpBalance = getBalanceByBrand('Liquidity', lpTokenIssuer).value;
-      if (lpBalance === 0n) {
-        assertAllocationStatePhase(phaseSnapshot, ALLOCATION_PHASE.SCHEDULED);
-      } else {
-        assertAllocationStatePhase(phaseSnapshot, ALLOCATION_PHASE.ACTIVE);
-      }
+      assertScheduledOrActive(phaseSnapshot);
 
       const {
-        give: { Liquidity: lpTokenAmount },
+        give: { LpToken: lpTokenAmount },
       } = creatorSeat.getProposal();
 
       stopLossSeat.incrementBy(
-        creatorSeat.decrementBy(harden({ Liquidity: lpTokenAmount })),
+        creatorSeat.decrementBy(harden({ LpToken: lpTokenAmount })),
       );
 
       zcf.reallocate(stopLossSeat, creatorSeat);
@@ -205,19 +203,19 @@ const start = async (zcf) => {
   const makeWithdrawLpTokensInvitation = () => {
     const withdrawLpTokens = (creatorSeat) => {
       assertProposalShape(creatorSeat, {
-        want: {Liquidity: null},
+        want: {LpToken: null},
       });
 
-      assertAllocationStatePhase(phaseSnapshot, ALLOCATION_PHASE.ACTIVE);
+      assertActiveOrError(phaseSnapshot)
 
       const lpTokenAmountAllocated = stopLossSeat.getAmountAllocated(
-        'Liquidity',
+        'LpToken',
         lpTokenBrand,
       )
 
       creatorSeat.incrementBy(
         stopLossSeat.decrementBy(
-          harden({Liquidity: lpTokenAmountAllocated}),
+          harden({LpToken: lpTokenAmountAllocated}),
         ),
       );
 
@@ -235,10 +233,10 @@ const start = async (zcf) => {
 
   const removeLiquidityFromAmm = async () => {
     const removeLiquidityInvitation =
-      E(ammPublicFacet).makeRemoveLiquidityInvitation();
+      await E(ammPublicFacet).makeRemoveLiquidityInvitation();
 
-    const liquidityIn = stopLossSeat.getAmountAllocated(
-      'Liquidity',
+    const lpTokensLockedAmount = stopLossSeat.getAmountAllocated(
+      'LpToken',
       lpTokenBrand,
     );
 
@@ -248,17 +246,29 @@ const start = async (zcf) => {
         Secondary: AmountMath.makeEmpty(secondaryBrand),
       },
       give: {
-        Liquidity: liquidityIn,
+        Liquidity: lpTokensLockedAmount,
       },
+    });
+
+    const keywordMapping = harden({
+      LpToken: 'Liquidity',
     });
 
     const { deposited, userSeatPromise: liquiditySeat } = await offerTo(
       zcf,
       removeLiquidityInvitation,
-      undefined,
+      keywordMapping,
       proposal,
       stopLossSeat,
     );
+
+    try {
+      await E(liquiditySeat).getOfferResult();
+    } catch (error) {
+      updateAllocationState(ALLOCATION_PHASE.ERROR);
+      tracer('removeLiquidityFromAmm encounted an error: ', error);
+      return
+    };
 
     const [amounts, removeOfferResult] = await Promise.all([deposited, E(liquiditySeat).getOfferResult()]);
     tracer('Amounts from removal', amounts);
@@ -283,6 +293,7 @@ const start = async (zcf) => {
     };
 
     return zcf.makeInvitation(updateConfiguration, 'Update boundary configuration')
+
   };
 
   const getBalanceByBrand = (keyword, issuer) => {

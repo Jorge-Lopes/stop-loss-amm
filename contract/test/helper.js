@@ -20,8 +20,16 @@ import { UPDATED_BOUNDARY_MESSAGE } from '../src/constants.js';
 */
 
 export const makeAssets = () => {
-  const centralR = makeIssuerKit('Central', AssetKind.NAT, harden({ decimalPlaces: 8 }));
-  const secondaryR = makeIssuerKit('Secondary', AssetKind.NAT, harden({ decimalPlaces: 8 }));
+  const centralR = makeIssuerKit(
+    'Central',
+    AssetKind.NAT,
+    harden({ decimalPlaces: 8 }),
+  );
+  const secondaryR = makeIssuerKit(
+    'Secondary',
+    AssetKind.NAT,
+    harden({ decimalPlaces: 8 }),
+  );
 
   return { centralR, secondaryR };
 };
@@ -116,15 +124,15 @@ export async function addLiquidityToPool(
   return addLiquidity(secondaryValue, centralValue);
 }
 
-export async function removeLiquidityToPool(
+export async function removeLiquidityFromPool(
   t,
   zoe,
   ammPublicFacet,
   centralR,
   secondaryR,
   lpTokenIssuer,
-  liquidityPayment,
-  liquidityValue,
+  lpTokenPayment,
+  lpTokenValue,
 ) {
   const { removeLiquidity } = await makeLiquidityInvitations(
     t,
@@ -135,11 +143,12 @@ export async function removeLiquidityToPool(
     lpTokenIssuer,
   );
 
-  const payoutRemove = await removeLiquidity(liquidityPayment, liquidityValue);
+  const payoutRemove = await removeLiquidity(lpTokenPayment, lpTokenValue);
   return payoutRemove;
 }
 
 export async function swapSecondaryForCentral(
+  t,
   zoe,
   ammPublicFacet,
   secondaryR,
@@ -161,6 +170,7 @@ export async function swapSecondaryForCentral(
 }
 
 export async function swapCentralForSecondary(
+  t,
   zoe,
   ammPublicFacet,
   secondaryR,
@@ -184,7 +194,7 @@ export async function swapCentralForSecondary(
 export const makeAssertPayouts = (
   t,
   lpTokenIssuer,
-  liquidityBrand,
+  lpTokenBrand,
   centralR,
   secondaryR,
 ) => {
@@ -196,13 +206,13 @@ export const makeAssertPayouts = (
     sPayment,
     sExpected,
   ) => {
-    const lAmount = AmountMath.make(liquidityBrand, lExpected);
+    const lAmount = AmountMath.make(lpTokenBrand, lExpected);
     await assertPayoutAmount(
       t,
       lpTokenIssuer,
       lPayment,
       lAmount,
-      'Liquidity payout',
+      'LpToken payout',
     );
     const cAmount = AmountMath.make(centralR.brand, cExpected);
     await assertPayoutAmount(
@@ -286,15 +296,25 @@ export const getBoundaries = async (
  * @param {Ratio} boundaryMargin
  * @returns {Promise<string>}
  */
-export const moveFromCentralPriceUpOneTrade = async (zoe,
-                                             ammPublicFacet,
-                                             secondaryR,
-                                             centralR,
-                                             lpTokenIssuer,
-                                             boundaryMargin) => {
-  const {
-    swapSecondaryForCentral,
-  } = await makeLiquidityInvitations(undefined, zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer);
+
+export const moveFromCentralPriceUp = async (
+  zoe,
+  ammPublicFacet,
+  secondaryR,
+  centralR,
+  lpTokenIssuer,
+  upperBoundary,
+  swapInterval = 1n,
+) => {
+  const { swapSecondaryForCentral, makeCentral, makeSecondary } =
+    await makeLiquidityInvitations(
+      undefined,
+      zoe,
+      ammPublicFacet,
+      secondaryR,
+      centralR,
+      lpTokenIssuer,
+    );
 
   const { Secondary: secondaryAmount } = await E(ammPublicFacet).getPoolAllocation(secondaryR.brand);
 
@@ -317,18 +337,31 @@ export const moveFromCentralPriceUpOneTrade = async (zoe,
  * @param {Ratio} boundaryMargin
  * @returns {Promise<void>}
  */
-export const moveFromCentralPriceDownOneTrade = async (zoe,
-                                               ammPublicFacet,
-                                               secondaryR,
-                                               centralR,
-                                               lpTokenIssuer,
-                                               boundaryMargin) => {
 
-  const {
-    swapCentralForSecondary,
-  } = await makeLiquidityInvitations(undefined, zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer);
+export const moveFromCentralPriceDown = async (
+  zoe,
+  ammPublicFacet,
+  secondaryR,
+  centralR,
+  lpTokenIssuer,
+  lowerBoundary,
+  swapInterval = 1n,
+) => {
+  const { swapCentralForSecondary, makeCentral, makeSecondary } =
+    await makeLiquidityInvitations(
+      undefined,
+      zoe,
+      ammPublicFacet,
+      secondaryR,
+      centralR,
+      lpTokenIssuer,
+    );
 
-  const { Central: centralAmount } = await E(ammPublicFacet).getPoolAllocation(secondaryR.brand);
+  const { amountOut } = await E(ammPublicFacet).getInputPrice(
+    makeCentral(1n),
+    makeSecondary(0n),
+  );
+  let inputPriceAmountOut = amountOut;
 
   const tradeAmount = floorMultiplyBy(centralAmount, boundaryMargin);
 

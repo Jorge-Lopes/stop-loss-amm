@@ -20,7 +20,7 @@ import { AmountMath } from '@agoric/ertp';
  * @param {XYKAMMPublicFacet} ammPublicFacet
  * @param {{ mint: Mint; issuer: Issuer; brand: Brand; displayInfo: DisplayInfo }} secondaryR
  * @param {{ mint: Mint; issuer: Issuer; brand: Brand; displayInfo: DisplayInfo }} centralR
- * @param {*} liquidityIssuer
+ * @param {*} lpTokenIssuer
  * @returns
  */
 export const makeLiquidityInvitations = async (
@@ -29,11 +29,11 @@ export const makeLiquidityInvitations = async (
   ammPublicFacet,
   secondaryR,
   centralR,
-  liquidityIssuer,
+  lpTokenIssuer,
 ) => {
   const makeCentral = (value) => AmountMath.make(centralR.brand, value * 10n ** BigInt(centralR.displayInfo.decimalPlaces));
   const makeSecondary = (value) => AmountMath.make(secondaryR.brand, value * 10n ** BigInt(secondaryR.displayInfo.decimalPlaces));
-  const liquidityBrand = await E(liquidityIssuer).getBrand();
+  const lpTokenBrand = await E(lpTokenIssuer).getBrand();
 
   const initPool = async (secondaryValue, centralValue) => {
     const addPoolInvitation = E(ammPublicFacet).addPoolInvitation();
@@ -43,7 +43,7 @@ export const makeLiquidityInvitations = async (
         Secondary: makeSecondary(secondaryValue),
         Central: makeCentral(centralValue),
       },
-      want: { Liquidity: AmountMath.make(liquidityBrand, 1000n) },
+      want: { Liquidity: AmountMath.make(lpTokenBrand, 1000n) },
     });
     const payments = {
       Secondary: secondaryR.mint.mintPayment(makeSecondary(secondaryValue)),
@@ -62,7 +62,7 @@ export const makeLiquidityInvitations = async (
       `Added Secondary and Central Liquidity`,
     );
 
-    return { seat: addLiquiditySeat, liquidityIssuer };
+    return { seat: addLiquiditySeat, lpTokenIssuer };
   };
 
   const addLiquidity = async (secondary, central) => {
@@ -76,7 +76,7 @@ export const makeLiquidityInvitations = async (
     const centralPayment = centralR.mint.mintPayment(makeCentral(central));
 
     const proposal = harden({
-      want: { Liquidity: AmountMath.make(liquidityBrand, 1000n) },
+      want: { Liquidity: AmountMath.make(lpTokenBrand, 1000n) },
       give: {
         Secondary: makeSecondary(secondary),
         Central: makeCentral(central),
@@ -96,20 +96,20 @@ export const makeLiquidityInvitations = async (
     return E(addLiquiditySeat).getPayouts();
   };
 
-  const removeLiquidity = async (liquidityPayment, liquidity) => {
+  const removeLiquidity = async (lpTokenPayment, lpTokenValue) => {
     const removeLiquidityInvitation = E(
       ammPublicFacet,
     ).makeRemoveLiquidityInvitation();
 
-    const emptyLiquidity = AmountMath.make(liquidityBrand, liquidity);
+    const lpTokenAmount = AmountMath.make(lpTokenBrand, lpTokenValue);
     const proposal = harden({
-      give: { Liquidity: emptyLiquidity },
+      give: { Liquidity: lpTokenAmount },
       want: {
         Secondary: makeSecondary(0n),
         Central: makeCentral(0n),
       },
     });
-    const payment = { Liquidity: liquidityPayment };
+    const payment = { Liquidity: lpTokenPayment };
 
     const addLiquiditySeat = await E(zoe).offer(
       removeLiquidityInvitation,
