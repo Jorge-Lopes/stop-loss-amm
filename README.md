@@ -30,40 +30,40 @@ Please make sure you install the agoric-sdk first.
    2. Run `npx ava --verbose test/lendingPool/test-stopLoss.js`.
 
 
-# Demonstration Scenarios
+# Demonstration scenarios
 
 ## Initiate Environment
 
 Start Agoric local chain
 
-   terminal #1 cosmic-swingset %
-   > make scenario2-setup
-   > make scenario2-run-chain-economy
+    terminal #1 cosmic-swingset %
+    > make scenario2-setup
+    > make scenario2-run-chain-economy
 
 Run Agoric client
-   
-   terminal #2 cosmic-swingset %
-   > make scenario2-run-client
+    
+    terminal #2 cosmic-swingset %
+    > make scenario2-run-client
 
 Initiate State
-   
-   terminal #3 stop-loss-amm %
-   > agoric deploy contract/deploy/initState.js
+    
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/initState.js
 
 Add AMM pool and define boundaries (20%)
 
-   terminal #3 stop-loss-amm %
-   > stop-loss-amm % agoric deploy contract/deploy/addPool.js
+    terminal #3 stop-loss-amm %
+    > stop-loss-amm % agoric deploy contract/deploy/addPool.js
+ 
+    terminal #4 t1 %
+    > agoric open --no-browser --repl
 
-   terminal #4 t1 %
-   > agoric open --no-browser --repl
-
-   -> Approve Offer
+    -> Approve Offer
 
 Check Environment 
 
-   terminal #3 stop-loss-amm %
-   > agoric deploy contract/deploy/getFromCentralPrice.js
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/getFromCentralPrice.js
 
 
 ## Scenario 1
@@ -75,46 +75,46 @@ The user specifies the price boundaries and locks an amount of LP tokens in stop
 
 Initiate stopLoss Contract
 
-   terminal #3 stop-loss-amm %
-   > agoric deploy contract/deploy/initStopLoss.js
-   
-   agoric repl %
-   > cf = E(home.scratch).get('stop_loss_creator_facet_scratch_id')
-   > notifier = E(cf).getNotifier()
-   > E(notifier).getUpdateSince()
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/initStopLoss.js
+    
+    agoric wallet cli %
+    > cf = E(home.scratch).get('stop_loss_creator_facet_scratch_id')
+    > notifier = E(cf).getNotifier()
+    > E(notifier).getUpdateSince()
 
 Lock Lp Tokens
 
-   terminal #3 stop-loss-amm %
-   > agoric deploy contract/deploy/lockLpTokens.js
-   
-   -> Approve Offer
-   
-   agoric repl %
-   > E(notifier).getUpdateSince()
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/lockLpTokens.js
+    
+    -> Approve Offer
+    
+    agoric wallet cli %
+    > E(notifier).getUpdateSince()
 
 Move Price Up (15%)
 
-   Update <TRADE_MARGIN> to 15 at movePriceUp.js
-   const TRADE_MARGIN = 15n;
+    Update <TRADE_MARGIN> to 15 at movePriceUp.js
+    const TRADE_MARGIN = 15n;
 
-   terminal #3 stop-loss-amm %
-   > agoric deploy contract/deploy/movePriceUp.js
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/movePriceUp.js
 
-   -> Approve Offer
+    -> Approve Offer
 
-   agoric repl %
-   > E(notifier).getUpdateSince()
+    agoric wallet cli %
+    > E(notifier).getUpdateSince()
 
 Withdraw Liquidity
 
-   terminal #3 stop-loss-amm %
-   > stop-loss-amm % agoric deploy contract/deploy/withdrawLiquidity.js
+    terminal #3 stop-loss-amm %
+    > stop-loss-amm % agoric deploy contract/deploy/withdrawLiquidity.js
 
-   -> Approve Offer
+    -> Approve Offer
 
-   agoric repl %
-   > E(notifier).getUpdateSince()
+    agoric wallet cli %
+    > E(notifier).getUpdateSince()
 
 
 ## Scenario 2
@@ -128,72 +128,72 @@ The amm pool price goes lower again, this time will hit the current lower bounda
 
 Initiate stopLoss Contract
 
-   terminal #3 stop-loss-amm %
-   > agoric deploy contract/deploy/initStopLoss.js
-   
-   agoric repl %
-   > cf = E(home.scratch).get('stop_loss_creator_facet_scratch_id')
-   > notifier = E(cf).getNotifier()
-   > E(notifier).getUpdateSince()
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/initStopLoss.js
+    
+    agoric wallet cli %
+    > cf = E(home.scratch).get('stop_loss_creator_facet_scratch_id')
+    > notifier = E(cf).getNotifier()
+    > E(notifier).getUpdateSince()
 
 Lock Lp Tokens
 
-   terminal #3 stop-loss-amm %
-   > agoric deploy contract/deploy/lockLpTokens.js
-   
-   -> Approve Offer
-   
-   agoric repl %
-   > E(notifier).getUpdateSince()
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/lockLpTokens.js
+    
+    -> Approve Offer
+    
+    agoric wallet cli %
+    > E(notifier).getUpdateSince()
 
 Update Boundaries (30%)
 
-   Update Boundaries to 30n at updateBoundaries.js
-   AmountMath.make(istBrand, 10n ** 6n), secondaryBrand, 30n);
+    Update Boundaries to 30n at updateBoundaries.js
+    AmountMath.make(istBrand, 10n ** 6n), secondaryBrand, 30n);
 
-   terminal #3 stop-loss-amm %
-   > agoric deploy contract/deploy/updateBoundaries.js
-   
-   -> Approve Offer
-   
-   agoric repl %
-   > E(notifier).getUpdateSince()
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/updateBoundaries.js
+    
+    -> Approve Offer
+    
+    agoric wallet cli %
+    > E(notifier).getUpdateSince()
 
 Move Price Down (15%)
 
-   Update <TRADE_MARGIN> to 15 at movePriceDown.js
-   const TRADE_MARGIN = 15n;
+    Update <TRADE_MARGIN> to 15 at movePriceDown.js
+    const TRADE_MARGIN = 15n;
 
-   terminal #3 stop-loss-amm %
-   > agoric deploy contract/deploy/movePriceDown.js
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/movePriceDown.js
 
-   -> Approve Offer
+    -> Approve Offer
 
-   agoric repl %
-   > E(notifier).getUpdateSince()
+    agoric wallet cli %
+    > E(notifier).getUpdateSince()
 
 Move Price Down (10%)
 
-   Update <TRADE_MARGIN> to 10 at movePriceDown.js
-   const TRADE_MARGIN = 10n;
+    Update <TRADE_MARGIN> to 10 at movePriceDown.js
+    const TRADE_MARGIN = 10n;
 
-   terminal #3 stop-loss-amm %
-   > agoric deploy contract/deploy/movePriceDown.js
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/movePriceDown.js
 
-   -> Approve Offer
+    -> Approve Offer
 
-   agoric repl %
-   > E(notifier).getUpdateSince()
+    agoric wallet cli %
+    > E(notifier).getUpdateSince()
 
 Withdraw Liquidity
 
-   terminal #3 stop-loss-amm %
-   > stop-loss-amm % agoric deploy contract/deploy/withdrawLiquidity.js
+    terminal #3 stop-loss-amm %
+    > stop-loss-amm % agoric deploy contract/deploy/withdrawLiquidity.js
 
-   -> Approve Offer
+    -> Approve Offer
 
-   agoric repl %
-   > E(notifier).getUpdateSince()
+    agoric wallet cli %
+    > E(notifier).getUpdateSince()
 
 
 ## Scenario 3
@@ -205,43 +205,43 @@ The user specifies the price boundaries and locks an amount of LP tokens in stop
 
 Initiate stopLoss Contract
 
-   terminal #3 stop-loss-amm %
-   > agoric deploy contract/deploy/initStopLoss.js
-   
-   agoric repl %
-   > cf = E(home.scratch).get('stop_loss_creator_facet_scratch_id')
-   > notifier = E(cf).getNotifier()
-   > E(notifier).getUpdateSince()
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/initStopLoss.js
+    
+    agoric wallet cli %
+    > cf = E(home.scratch).get('stop_loss_creator_facet_scratch_id')
+    > notifier = E(cf).getNotifier()
+    > E(notifier).getUpdateSince()
 
 Lock Lp Tokens
 
-   terminal #3 stop-loss-amm %
-   > agoric deploy contract/deploy/lockLpTokens.js
-   
-   -> Approve Offer
-   
-   agoric repl %
-   > E(notifier).getUpdateSince()
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/lockLpTokens.js
+    
+    -> Approve Offer
+    
+    agoric wallet cli %
+    > E(notifier).getUpdateSince()
 
 Lock Lp Tokens
 
-   terminal #3 stop-loss-amm %
-   > agoric deploy contract/deploy/lockLpTokens.js
-   
-   -> Approve Offer
-   
-   agoric repl %
-   > E(notifier).getUpdateSince()
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/lockLpTokens.js
+    
+    -> Approve Offer
+    
+    agoric wallet cli %
+    > E(notifier).getUpdateSince()
 
 Withdraw Liquidity
 
-   terminal #3 stop-loss-amm %
-   > stop-loss-amm % agoric deploy contract/deploy/withdrawLiquidity.js
+    terminal #3 stop-loss-amm %
+    > stop-loss-amm % agoric deploy contract/deploy/withdrawLiquidity.js
 
-   -> Approve Offer
+    -> Approve Offer
 
-   agoric repl %
-   > E(notifier).getUpdateSince()
+    agoric wallet cli %
+    > E(notifier).getUpdateSince()
 
 
 ## Scenario 4
@@ -253,33 +253,33 @@ The user specifies the price boundaries and locks an amount of LP tokens in stop
 
 Initiate stopLoss Contract
 
-   terminal #3 stop-loss-amm %
-   > agoric deploy contract/deploy/initStopLoss.js
-   
-   agoric repl %
-   > cf = E(home.scratch).get('stop_loss_creator_facet_scratch_id')
-   > notifier = E(cf).getNotifier()
-   > E(notifier).getUpdateSince()
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/initStopLoss.js
+    
+    agoric wallet cli %
+    > cf = E(home.scratch).get('stop_loss_creator_facet_scratch_id')
+    > notifier = E(cf).getNotifier()
+    > E(notifier).getUpdateSince()
 
 Lock Lp Tokens
 
-   terminal #3 stop-loss-amm %
-   > agoric deploy contract/deploy/lockLpTokens.js
-   
-   -> Approve Offer
-   
-   agoric repl %
-   > E(notifier).getUpdateSince()
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/lockLpTokens.js
+    
+    -> Approve Offer
+    
+    agoric wallet cli %
+    > E(notifier).getUpdateSince()
 
 Withdraw Lp Tokens
-   
-   terminal #3 stop-loss-amm %
-   >stop-loss-amm % agoric deploy contract/deploy/withdrawLpTokens.js
+    
+    terminal #3 stop-loss-amm %
+    >stop-loss-amm % agoric deploy contract/deploy/withdrawLpTokens.js
 
-   -> Approve Offer
-   
-   agoric repl %
-   > E(notifier).getUpdateSince()
+    -> Approve Offer
+    
+    agoric wallet cli %
+    > E(notifier).getUpdateSince()
 
 
 ## Scenario 5
@@ -291,43 +291,43 @@ The user specifies the price boundaries and locks an amount of LP tokens in stop
 
 Initiate stopLoss Contract
 
-   terminal #3 stop-loss-amm %
-   > agoric deploy contract/deploy/initStopLoss.js
-   
-   agoric repl %
-   > cf = E(home.scratch).get('stop_loss_creator_facet_scratch_id')
-   > notifier = E(cf).getNotifier()
-   > E(notifier).getUpdateSince()
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/initStopLoss.js
+    
+    agoric wallet cli %
+    > cf = E(home.scratch).get('stop_loss_creator_facet_scratch_id')
+    > notifier = E(cf).getNotifier()
+    > E(notifier).getUpdateSince()
 
 Lock Lp Tokens
 
-   terminal #3 stop-loss-amm %
-   > agoric deploy contract/deploy/lockLpTokens.js
-   
-   -> Approve Offer
-   
-   agoric repl %
-   > E(notifier).getUpdateSince()
-   
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/lockLpTokens.js
+    
+    -> Approve Offer
+    
+    agoric wallet cli %
+    > E(notifier).getUpdateSince()
+    
 Update Boundaries out of Price range
 
-   terminal #3 stop-loss-amm %
-   > agoric deploy contract/deploy/updateBoundaryOutsideRange.js
-   
-   -> Approve Offer
-   
-   agoric repl %
-   > E(notifier).getUpdateSince()
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/updateBoundaryOutsideRange.js
+    
+    -> Approve Offer
+    
+    agoric wallet cli %
+    > E(notifier).getUpdateSince()
+  
+ Withdraw Lp Tokens
+    
+    terminal #3 stop-loss-amm %
+    >stop-loss-amm % agoric deploy contract/deploy/withdrawLpTokens.js
 
-Withdraw Lp Tokens
-   
-   terminal #3 stop-loss-amm %
-   >stop-loss-amm % agoric deploy contract/deploy/withdrawLpTokens.js
-
-   -> Approve Offer
-   
-   agoric repl %
-   > E(notifier).getUpdateSince()
+    -> Approve Offer
+    
+    agoric wallet cli %
+    > E(notifier).getUpdateSince()
 
 
 ## Scenario 6
@@ -339,5 +339,6 @@ The user initiate the stopLoss contract with the boundaries range outside of the
 
 Initiate stopLoss Contract with faulty boundaries
 
-   terminal #3 stop-loss-amm %
-   > agoric deploy contract/deploy/initFaultyStopLoss.js
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/initFaultyStopLoss.js
+    
