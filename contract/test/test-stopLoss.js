@@ -789,7 +789,6 @@ test('trigger-lp-removal-price-moves-below-lower', async (t) => {
   console.log('Moving the price up...');
   await moveFromCentralPriceDownOneTrade(zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer, makeRatio(boundaries.boundaryMarginValue, centralR.brand));
   console.log('Done.');
-  trace('InputPriceAfter', inputPriceAfter);
 
   await eventLoopIteration();
 
@@ -2062,8 +2061,7 @@ test('update-boundaries-outside-of-price-ratio', async (t) => {
     upper: makeRatioFromAmounts(AmountMath.add(boundaries.upper.numerator, updateMargin), centralInUnit(1n)),
   };
 
-  const updateResult = await E(creatorFacet).updateConfiguration(newBoundaries  );
-  t.deepEqual(updateResult, UPDATED_BOUNDARY_MESSAGE);
+  await updateBoundariesAndCheckResult(t, zoe, creatorFacet, newBoundaries);
 
   await eventLoopIteration();
 
