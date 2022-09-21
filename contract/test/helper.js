@@ -20,8 +20,16 @@ import { UPDATED_BOUNDARY_MESSAGE } from '../src/constants.js';
 */
 
 export const makeAssets = () => {
-  const centralR = makeIssuerKit('Central', AssetKind.NAT, harden({ decimalPlaces: 8 }));
-  const secondaryR = makeIssuerKit('Secondary', AssetKind.NAT, harden({ decimalPlaces: 8 }));
+  const centralR = makeIssuerKit(
+    'Central',
+    AssetKind.NAT,
+    harden({ decimalPlaces: 8 }),
+  );
+  const secondaryR = makeIssuerKit(
+    'Secondary',
+    AssetKind.NAT,
+    harden({ decimalPlaces: 8 }),
+  );
 
   return { centralR, secondaryR };
 };
@@ -116,15 +124,15 @@ export async function addLiquidityToPool(
   return addLiquidity(secondaryValue, centralValue);
 }
 
-export async function removeLiquidityToPool(
+export async function removeLiquidityFromPool(
   t,
   zoe,
   ammPublicFacet,
   centralR,
   secondaryR,
   lpTokenIssuer,
-  liquidityPayment,
-  liquidityValue,
+  lpTokenPayment,
+  lpTokenValue,
 ) {
   const { removeLiquidity } = await makeLiquidityInvitations(
     t,
@@ -135,11 +143,12 @@ export async function removeLiquidityToPool(
     lpTokenIssuer,
   );
 
-  const payoutRemove = await removeLiquidity(liquidityPayment, liquidityValue);
+  const payoutRemove = await removeLiquidity(lpTokenPayment, lpTokenValue);
   return payoutRemove;
 }
 
 export async function swapSecondaryForCentral(
+  t,
   zoe,
   ammPublicFacet,
   secondaryR,
@@ -148,7 +157,7 @@ export async function swapSecondaryForCentral(
   secondaryValueIn,
 ) {
   const { swapSecondaryForCentral } = await makeLiquidityInvitations(
-    undefined,
+    t,
     zoe,
     ammPublicFacet,
     secondaryR,
@@ -161,6 +170,7 @@ export async function swapSecondaryForCentral(
 }
 
 export async function swapCentralForSecondary(
+  t,
   zoe,
   ammPublicFacet,
   secondaryR,
@@ -169,7 +179,7 @@ export async function swapCentralForSecondary(
   centralValueIn,
 ) {
   const { swapCentralForSecondary } = await makeLiquidityInvitations(
-    undefined,
+    t,
     zoe,
     ammPublicFacet,
     secondaryR,
@@ -184,7 +194,7 @@ export async function swapCentralForSecondary(
 export const makeAssertPayouts = (
   t,
   lpTokenIssuer,
-  liquidityBrand,
+  lpTokenBrand,
   centralR,
   secondaryR,
 ) => {
@@ -196,13 +206,13 @@ export const makeAssertPayouts = (
     sPayment,
     sExpected,
   ) => {
-    const lAmount = AmountMath.make(liquidityBrand, lExpected);
+    const lAmount = AmountMath.make(lpTokenBrand, lExpected);
     await assertPayoutAmount(
       t,
       lpTokenIssuer,
       lPayment,
       lAmount,
-      'Liquidity payout',
+      'LpToken payout',
     );
     const cAmount = AmountMath.make(centralR.brand, cExpected);
     await assertPayoutAmount(
