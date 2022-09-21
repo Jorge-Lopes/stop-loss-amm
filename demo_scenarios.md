@@ -36,6 +36,7 @@ Check Environment
 ## Scenario 1
 
 ### Description:
+The user specifies the price boundaries and locks an amount of LP tokens in stopLoss contract. The amm pool price goes up and hits the upper boundary, which will trigger the contract to remove the user liquidity from the amm pool. The user will then withdraw his liquidity from the contract to his purse.
 
 ### Steps:
 
@@ -88,6 +89,9 @@ Withdraw Liquidity
 ## Scenario 2
 
 ### Description:
+The user specifies the price boundaries and locks an amount of LP tokens in stopLoss contract. Later the user updates his boundaries to a wider range. The amm pool price goes lower than the initially specified lower boundary, this price update will not trigger the liquidity removal. 
+
+The amm pool price goes lower again, this time will hit the current lower boundary, which will trigger the contract to remove the user liquidity from the amm pool. The user will then withdraw his liquidity from the contract to his purse.
 
 ### Steps:
 
@@ -166,6 +170,7 @@ Withdraw Liquidity
 ## Scenario 3
 
 ### Description:
+The user specifies the price boundaries and locks an amount of LP tokens in stopLoss contract. Later the user locks an additional amount of LP tokens. Then the user will deliberately withdraw his liquidity, without waiting for the amm pool price to hit a boundary.
 
 ### Steps:
 
@@ -211,9 +216,11 @@ Withdraw Liquidity
     agoric wallet cli %
     > E(notifier).getUpdateSince()
 
+
 ## Scenario 4
 
 ### Description:
+The user specifies the price boundaries and locks an amount of LP tokens in stopLoss contract. Then the user will deliberately withdraw his LP tokens locked in the contract.
 
 ### Steps:
 
