@@ -5,7 +5,7 @@
 Start Agoric local chain
 
     terminal #1 cosmic-swingset %
-    > make scenario2-setup BASE_PORT:8000 NUM_SOLO=2
+    > make scenario2-setup
 
 Run Agoric client
     
