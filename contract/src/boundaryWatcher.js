@@ -63,18 +63,29 @@ export const makeBoundaryWatcher = ({
     const { upper, lower } = newBoundaries;
     trace('Updating Boundaries', newBoundaries);
 
-    await Promise.all([
-      E(upperBoundaryMutableQuote).updateLevel(
-        upper.denominator,
-        upper.numerator,
-      ),
-      E(lowerBoundaryMutableQuote).updateLevel(
-        lower.denominator,
-        lower.numerator,
-      ),
-    ]);
+    const updateBoundaryPromiseKit = makePromiseKit();
 
-    return UPDATED_BOUNDARY_MESSAGE;
+    const callUpdateOnMutableQuoteObjects = async () => {
+      await Promise.all([
+        E(upperBoundaryMutableQuote).updateLevel(
+          upper.denominator,
+          upper.numerator,
+        ),
+        E(lowerBoundaryMutableQuote).updateLevel(
+          lower.denominator,
+          lower.numerator,
+        ),
+      ]);
+
+      updateBoundaryPromiseKit.resolve({ code: BOUNDARY_WATCHER_STATUS.SUCCESS, message: 'Both mutable quotes are updates successfuly' });
+    }
+
+    callUpdateOnMutableQuoteObjects().catch(error => updateBoundaryPromiseKit.resolve({
+      code: BOUNDARY_WATCHER_STATUS.FAIL,
+      message: `[ERROR] Following error occured when updating the quotes: ${error}`,
+    }));
+
+    return updateBoundaryPromiseKit.promise;
   };
 
   return harden({

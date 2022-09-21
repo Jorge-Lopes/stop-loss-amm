@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "useWorkspaces": true,
+  "type": "module",
   "workspaces": [
     "api",
     "contract"

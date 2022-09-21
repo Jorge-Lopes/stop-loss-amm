@@ -10,7 +10,7 @@ import buildManualTimer from '@agoric/zoe/tools/manualTimer.js';
 import { makeRatio, makeRatioFromAmounts } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { makeBoundaryWatcher } from '../src/boundaryWatcher.js';
 import { eventLoopIteration } from '@agoric/zoe/tools/eventLoopIteration.js';
-import { BOUNDARY_WATCHER_STATUS, UPDATED_BOUNDARY_MESSAGE } from '../src/constants.js';
+import { BOUNDARY_WATCHER_STATUS, UPDATE_BOUNDARY_STATUS, UPDATED_BOUNDARY_MESSAGE } from '../src/constants.js';
 import { makeTracer } from '@agoric/inter-protocol/src/makeTracer.js';
 
 const trace = makeTracer('Boundary Watcher Test');
@@ -153,7 +153,7 @@ test('update-upper-boundary-then-price-goes-above-upper', async t => {
     },
   } = t.context;
 
-  t.plan(3);
+  t.plan(4);
 
   const centralAmountOneUnit = AmountMath.make(centralBrand, 10n ** BigInt(centralDecimalPlaces));
 
@@ -203,8 +203,10 @@ test('update-upper-boundary-then-price-goes-above-upper', async t => {
     lower,
   };
 
-  const updateResultMessage = await updateBoundaries(newBoundaryConf);
-  t.is(updateResultMessage, UPDATED_BOUNDARY_MESSAGE);
+  /** @type {{code: number, message: string}} */
+  const updateResult = await updateBoundaries(newBoundaryConf);
+  t.is(updateResult.code, UPDATE_BOUNDARY_STATUS.SUCCESS);
+  t.is(updateResult.message, 'Both mutable quotes are updates successfuly');
 
   // Set the price just above the old upper boundary
   await E(fromCentralPriceAuthority).setPrice(
@@ -235,7 +237,7 @@ test('update-lower-boundary-then-price-goes-below-lower', async t => {
     },
   } = t.context;
 
-  t.plan(3);
+  t.plan(4);
 
   const centralAmountOneUnit = AmountMath.make(centralBrand, 10n ** BigInt(centralDecimalPlaces));
 
@@ -286,8 +288,10 @@ test('update-lower-boundary-then-price-goes-below-lower', async t => {
       centralAmountOneUnit),
   };
 
-  const updateResultMessage = await updateBoundaries(newBoundaryConf);
-  t.is(updateResultMessage, UPDATED_BOUNDARY_MESSAGE);
+  /** @type {{code: number, message: string}} */
+  const updateResult = await updateBoundaries(newBoundaryConf);
+  t.is(updateResult.code, UPDATE_BOUNDARY_STATUS.SUCCESS);
+  t.is(updateResult.message, 'Both mutable quotes are updates successfuly');
 
   // Set the price just below the old lower boundary
   await E(fromCentralPriceAuthority).setPrice(
@@ -318,7 +322,7 @@ test('update-both-boundaries-then-price-goes-above-upper', async t => {
     },
   } = t.context;
 
-  t.plan(3);
+  t.plan(4);
 
   const centralAmountOneUnit = AmountMath.make(centralBrand, 10n ** BigInt(centralDecimalPlaces));
 
@@ -370,8 +374,10 @@ test('update-both-boundaries-then-price-goes-above-upper', async t => {
       centralAmountOneUnit),
   };
 
-  const updateResultMessage = await updateBoundaries(newBoundaryConf);
-  t.is(updateResultMessage, UPDATED_BOUNDARY_MESSAGE);
+  /** @type {{code: number, message: string}} */
+  const updateResult = await updateBoundaries(newBoundaryConf);
+  t.is(updateResult.code, UPDATE_BOUNDARY_STATUS.SUCCESS);
+  t.is(updateResult.message, 'Both mutable quotes are updates successfuly');
 
   // Set the price just above the old upper boundary
   await E(fromCentralPriceAuthority).setPrice(

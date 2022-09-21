@@ -8,10 +8,16 @@ import {
 import { Far, E } from '@endo/far';
 import { AmountMath } from '@agoric/ertp';
 import { offerTo } from '@agoric/zoe/src/contractSupport/index.js';
-import { assertBoundaryShape, assertExecutionMode, assertAllocationStatePhase, assertScheduledOrActive, assertInitialBoundariesRange, assertActiveOrError } from './assertionHelper.js';
+import {
+  assertBoundaryShape,
+  assertExecutionMode,
+  assertAllocationStatePhase,
+  assertUpdateConfigOfferArgs, assertUpdateSucceeded,
+  assertScheduledOrActive, assertInitialBoundariesRange, assertActiveOrError
+} from './assertionHelper.js';
 import { makeBoundaryWatcher } from './boundaryWatcher.js';
 import { makeNotifierKit } from '@agoric/notifier';
-import { ALLOCATION_PHASE, BOUNDARY_WATCHER_STATUS } from './constants.js';
+import { ALLOCATION_PHASE, BOUNDARY_WATCHER_STATUS, UPDATED_BOUNDARY_MESSAGE } from './constants.js';
 import { makeTracer } from '@agoric/inter-protocol/src/makeTracer.js';
 
 
@@ -39,6 +45,10 @@ const start = async (zcf) => {
   const secondaryBrand = zcf.getBrandForIssuer(secondaryIssuer);
   const lpTokenBrand = zcf.getBrandForIssuer(lpTokenIssuer);
 
+  // phaseSnapshot used for assertAllocationStatePhase
+  let phaseSnapshot = ALLOCATION_PHASE.IDLE;
+  let boundariesSnapshot = {};
+
   const getStateSnapshot = phase => {
     return harden({
       phase: phase,
@@ -46,14 +56,12 @@ const start = async (zcf) => {
       liquidityBalance: {
         central: stopLossSeat.getAmountAllocated('Central', centralBrand),
         secondary: stopLossSeat.getAmountAllocated('Secondary', secondaryBrand),
-      }
+      },
+      boundaries: boundariesSnapshot,
     });
   };
 
   const { updater, notifier } = makeNotifierKit(getStateSnapshot(ALLOCATION_PHASE.IDLE));
-
-  // phaseSnapshot used for assertAllocationStatePhase
-  let phaseSnapshot = ALLOCATION_PHASE.IDLE;
 
   const updateAllocationState = (allocationPhase) => {
     const allocationState = getStateSnapshot(allocationPhase);
@@ -62,6 +70,7 @@ const start = async (zcf) => {
   }
 
   assertBoundaryShape(boundaries, centralBrand, secondaryBrand);
+  boundariesSnapshot = boundaries;
 
   const init = async () => {
     let fromCentralPriceAuthority;
@@ -275,9 +284,22 @@ const start = async (zcf) => {
     return removeOfferResult;
   };
 
-  const updateConfiguration = async boundaries => {
-    assertScheduledOrActive(phaseSnapshot);
-    return await updateBoundaries(boundaries);
+  const makeUpdateConfigurationInvitation = () => {
+    /** @type OfferHandler */
+    const updateConfiguration = async (seat, offerArgs) => {
+      assertScheduledOrActive(phaseSnapshot);
+      assertUpdateConfigOfferArgs(offerArgs);
+      const { boundaries } = offerArgs;
+
+      const updateBoundaryResult = await updateBoundaries(boundaries);
+      assertUpdateSucceeded(updateBoundaryResult);
+      boundariesSnapshot = boundaries;
+      updateAllocationState(ALLOCATION_PHASE.ACTIVE);
+
+      return UPDATED_BOUNDARY_MESSAGE;
+    };
+
+    return zcf.makeInvitation(updateConfiguration, 'Update boundary configuration')
   };
 
   const getBalanceByBrand = (keyword, issuer) => {
@@ -296,7 +318,7 @@ const start = async (zcf) => {
     makeLockLPTokensInvitation,
     makeWithdrawLiquidityInvitation,
     makeWithdrawLpTokensInvitation,
-    updateConfiguration,
+    makeUpdateConfigurationInvitation,
     getNotifier: () => notifier,
   });
 

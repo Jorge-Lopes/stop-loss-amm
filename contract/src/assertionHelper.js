@@ -2,6 +2,7 @@ import { assert, details as X } from '@agoric/assert';
 import { assertIsRatio } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { E } from '@endo/far';
 import { makeTracer } from '@agoric/inter-protocol/src/makeTracer.js';
+import { UPDATE_BOUNDARY_STATUS } from './constants.js';
 import { ALLOCATION_PHASE } from './constants.js';
 import { AmountMath } from '@agoric/ertp';
 
@@ -32,7 +33,7 @@ export const assertBoundaryShape = (boundaries, centralBrand, secondaryBrand) =>
 
 export const assertInitialBoundariesRange = (boundaries, quoteAmountOut) => {
   const { upper, lower } = boundaries;
-  
+
   assert(AmountMath.isGTE(upper.numerator, quoteAmountOut), X`Upper boundary should be higher or equal to current price: ${quoteAmountOut.value}`)
   assert(AmountMath.isGTE(quoteAmountOut, lower.numerator), X`Lower boundary should be lower or equal to current price: ${quoteAmountOut.value}`)
 }
@@ -53,6 +54,20 @@ export const assertExecutionMode = (ammPublicFacet, devPriceAuthority) => {
 
 export const assertAllocationStatePhase = (phaseSnapshot, phase) => {
   assert(phaseSnapshot === phase, X`AllocationState phase should be: ${phase}`);
+};
+
+export const assertUpdateConfigOfferArgs = offerArgs => {
+  tracer('updateBoudnaryConfiguration', offerArgs);
+  assert(typeof offerArgs == 'object', '[NO_OFFER_ARGS]');
+  assert(offerArgs.hasOwnProperty('boundaries'), X`OfferArgs should include an object named 'boundaries'`);
+};
+
+/**
+ *
+ * @param {{code: number, message: string}} updateReulst
+ */
+export const assertUpdateSucceeded = updateReulst => {
+  assert(updateReulst.code === UPDATE_BOUNDARY_STATUS.SUCCESS, X`${updateReulst.message}`);
 };
 
 export const assertScheduledOrActive = (phase) => {

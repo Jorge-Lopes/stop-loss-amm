@@ -126,20 +126,9 @@ export const makeLiquidityInvitations = async (
     const { value } = await E(invitationIssuer).getAmountOf(swapInvitation);
 
     assert(Array.isArray(value)); // non-fungible
-    const [invitationValue] = value;
-    const swapPublicFacet = await E(zoe).getPublicFacet(
-      invitationValue.instance,
-    );
-
-    const { amountOut: centralAmountOut } = await E(
-      swapPublicFacet,
-    ).getInputPrice(
-      makeSecondary(secondaryValueIn),
-      AmountMath.makeEmpty(centralR.brand),
-    );
 
     const secondaryForCentralProposal = harden({
-      want: { Out: centralAmountOut },
+      want: { Out: AmountMath.makeEmpty(centralR.brand) },
       give: { In: makeSecondary(secondaryValueIn) },
     });
 
@@ -163,20 +152,9 @@ export const makeLiquidityInvitations = async (
     const { value } = await E(invitationIssuer).getAmountOf(swapInvitation);
 
     assert(Array.isArray(value)); // non-fungible
-    const [invitationValue] = value;
-    const swapPublicFacet = await E(zoe).getPublicFacet(
-      invitationValue.instance,
-    );
-
-    const { amountOut: secondaryAmountOut } = await E(
-      swapPublicFacet,
-    ).getInputPrice(
-      makeCentral(centralValueIn),
-      AmountMath.makeEmpty(secondaryR.brand),
-    );
 
     const centralForSecondaryProposal = harden({
-      want: { Out: secondaryAmountOut },
+      want: { Out: AmountMath.makeEmpty(secondaryR.brand) },
       give: { In: makeCentral(centralValueIn) },
     });
 
