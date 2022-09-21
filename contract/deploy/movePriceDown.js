@@ -1,14 +1,13 @@
 import dappConstants from '../dappConstants.js';
 import { E } from '@endo/far';
 import { floorMultiplyBy, makeRatio } from '@agoric/zoe/src/contractSupport/ratio.js';
-import { AmountMath } from '@agoric/ertp';
 
 const movePriceDown = async homeP => {
   const home = await homeP;
   /** @type {{zoe: ZoeService}} */
   const { wallet, agoricNames, zoe, board } = home;
 
-  const TRADE_MARGIN = 25n;
+  const TRADE_MARGIN = 10n;
 
   const { SECONDARY_ISSUER_BOARD_ID } = dappConstants;
 

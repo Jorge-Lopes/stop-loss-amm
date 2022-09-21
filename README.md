@@ -27,4 +27,5 @@ Please make sure you install the agoric-sdk first.
    > So you should cd to contract/ directory until this issue is resolved.
    1. `cd contract`
    2. Run `npx ava --verbose test/lendingPool/test-stopLoss.js`.
- 
+
+

@@ -1,6 +1,5 @@
 // @ts-check
 
-// import fs from 'fs';
 import '@agoric/zoe/exported.js';
 import { E } from '@endo/far';
 import { makeDeployHelper } from './deployHelper.js';

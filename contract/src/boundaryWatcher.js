@@ -1,6 +1,6 @@
 import { E } from '@endo/far';
 import { makePromiseKit } from '@endo/promise-kit';
-import { BOUNDARY_WATCHER_STATUS, UPDATED_BOUNDARY_MESSAGE } from './constants.js';
+import { BOUNDARY_WATCHER_STATUS } from './constants.js';
 import { makeTracer } from '@agoric/inter-protocol/src/makeTracer.js';
 import { assertBoundaryShape } from './assertionHelper.js';
 
@@ -24,12 +24,11 @@ const trace = makeTracer('Boundary Watcher Module');
  * @param {Brand} secondaryBrand
  */
 export const makeBoundaryWatcher = ({
-                                     fromCentralPriceAuthority,
-                                     boundaries,
-                                     centralBrand,
-                                     secondaryBrand,
-                                   }) => {
-
+  fromCentralPriceAuthority,
+  boundaries,
+  centralBrand,
+  secondaryBrand,
+}) => {
   assertBoundaryShape(boundaries, centralBrand, secondaryBrand);
 
   const boundaryPromiseKit = makePromiseKit();
@@ -87,13 +86,18 @@ export const makeBoundaryWatcher = ({
         ),
       ]);
 
-      updateBoundaryPromiseKit.resolve({ code: BOUNDARY_WATCHER_STATUS.SUCCESS, message: 'Both mutable quotes are updates successfuly' });
-    }
+      updateBoundaryPromiseKit.resolve({
+        code: BOUNDARY_WATCHER_STATUS.SUCCESS,
+        message: 'Both mutable quotes are updates successfuly',
+      });
+    };
 
-    callUpdateOnMutableQuoteObjects().catch(error => updateBoundaryPromiseKit.resolve({
-      code: BOUNDARY_WATCHER_STATUS.FAIL,
-      message: `[ERROR] Following error occured when updating the quotes: ${error}`,
-    }));
+    callUpdateOnMutableQuoteObjects().catch((error) =>
+      updateBoundaryPromiseKit.resolve({
+        code: BOUNDARY_WATCHER_STATUS.FAIL,
+        message: `[ERROR] Following error occured when updating the quotes: ${error}`,
+      }),
+    );
 
     return updateBoundaryPromiseKit.promise;
   };

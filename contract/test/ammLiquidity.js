@@ -3,17 +3,6 @@
 import { E } from '@endo/eventual-send';
 import { AmountMath } from '@agoric/ertp';
 
-/*
-  File adapted from: @agoric/run-protocol/test/amm/vpool-xyk-amm/test-liquidity.js
-  When finished, consider importing the file instead of duplicating it this repository
-  Purpose:
-    Create function to interact with the AMM instace, such as:
-      - add pool
-      - add liquidity
-      - remove liquidity
-      - swap
-*/
-
 /**
  * @param t
  * @param {ZoeService} zoe

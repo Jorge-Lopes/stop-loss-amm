@@ -10,22 +10,18 @@ import {
   startAmmPool,
   startServices,
   startStopLoss,
-  swapSecondaryForCentral,
-  swapCentralForSecondary,
   getBoundaries,
   updateBoundariesAndCheckResult, differenceInPercent, moveFromCentralPriceDownOneTrade, moveFromCentralPriceUpOneTrade,
 } from './helper.js';
 import { E } from '@endo/far';
 import {
-  floorDivideBy,
   floorMultiplyBy,
   makeRatio,
   makeRatioFromAmounts,
-  quantize,
 } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { eventLoopIteration } from '@agoric/zoe/tools/eventLoopIteration.js';
 import { AmountMath } from '@agoric/ertp';
-import { ALLOCATION_PHASE, UPDATED_BOUNDARY_MESSAGE } from '../src/constants.js';
+import { ALLOCATION_PHASE } from '../src/constants.js';
 import { makeManualPriceAuthority } from '@agoric/zoe/tools/manualPriceAuthority.js';
 import buildManualTimer from '@agoric/zoe/tools/manualTimer.js';
 import { getAmountOut } from '@agoric/zoe/src/contractSupport/priceQuote.js';
@@ -2329,8 +2325,8 @@ test('remove-liquidity-failed-keep-tokens-locked', async (t) => {
 
 test('amm-playaround-secondary-price-down', async (t) => {
   const { zoe, amm, centralR, secondaryR } = await startServices(t);
-  const centralInitialValue = 40n;
-  const secondaryInitialValue = 80n;
+  const centralInitialValue = 100n;
+  const secondaryInitialValue = 200n;
 
   /** @type XYKAMMPublicFacet */
   const ammPublicFacet = amm.ammPublicFacet;
@@ -2358,7 +2354,7 @@ test('amm-playaround-secondary-price-down', async (t) => {
   trace('Price Before', getAmountOut(quoteBefore));
 
   console.log('Swapping Central For Secondary...');
-  await moveFromCentralPriceDownOneTrade(zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer, makeRatio(10n, centralR.brand));
+  await moveFromCentralPriceDownOneTrade(zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer, makeRatio(25n, centralR.brand));
   console.log('Done.');
 
   const quoteAfter = await E(fromCentral).quoteGiven(centralInUnit(1n), secondaryR.brand);
@@ -2372,8 +2368,8 @@ test('amm-playaround-secondary-price-down', async (t) => {
 
 test('amm-playaround-secondary-price-up', async (t) => {
   const { zoe, amm, centralR, secondaryR } = await startServices(t);
-  const centralInitialValue = 40n;
-  const secondaryInitialValue = 80n;
+  const centralInitialValue = 100n;
+  const secondaryInitialValue = 200n;
 
   /** @type XYKAMMPublicFacet */
   const ammPublicFacet = amm.ammPublicFacet;
@@ -2401,7 +2397,7 @@ test('amm-playaround-secondary-price-up', async (t) => {
   trace('Price Before', getAmountOut(quoteBefore));
 
   console.log('Swapping Central For Secondary...');
-  await moveFromCentralPriceUpOneTrade(zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer, makeRatio(20n, secondaryR.brand));
+  await moveFromCentralPriceUpOneTrade(zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer, makeRatio(15n, secondaryR.brand));
   console.log('Done.');
 
   const quoteAfter = await E(fromCentral).quoteGiven(centralInUnit(1n), secondaryR.brand);

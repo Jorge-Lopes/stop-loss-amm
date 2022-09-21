@@ -1,6 +1,5 @@
 import { assert, details as X } from '@agoric/assert';
 import { assertIsRatio } from '@agoric/zoe/src/contractSupport/ratio.js';
-import { E } from '@endo/far';
 import { makeTracer } from '@agoric/inter-protocol/src/makeTracer.js';
 import { UPDATE_BOUNDARY_STATUS } from './constants.js';
 import { ALLOCATION_PHASE } from './constants.js';

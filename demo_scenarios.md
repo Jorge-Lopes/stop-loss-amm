@@ -46,7 +46,7 @@ Initiate stopLoss Contract
     terminal #3 stop-loss-amm %
     > agoric deploy contract/deploy/initStopLoss.js
     
-    agoric wallet cli %
+    agoric repl %
     > cf = E(home.scratch).get('stop_loss_creator_facet_scratch_id')
     > notifier = E(cf).getNotifier()
     > E(notifier).getUpdateSince()
@@ -58,7 +58,7 @@ Lock Lp Tokens
     
     -> Approve Offer
     
-    agoric wallet cli %
+    agoric repl %
     > E(notifier).getUpdateSince()
 
 Move Price Up (15%)
@@ -71,7 +71,7 @@ Move Price Up (15%)
 
     -> Approve Offer
 
-    agoric wallet cli %
+    agoric repl %
     > E(notifier).getUpdateSince()
 
 Withdraw Liquidity
@@ -81,7 +81,7 @@ Withdraw Liquidity
 
     -> Approve Offer
 
-    agoric wallet cli %
+    agoric repl %
     > E(notifier).getUpdateSince()
 
 
@@ -99,7 +99,7 @@ Initiate stopLoss Contract
     terminal #3 stop-loss-amm %
     > agoric deploy contract/deploy/initStopLoss.js
     
-    agoric wallet cli %
+    agoric repl %
     > cf = E(home.scratch).get('stop_loss_creator_facet_scratch_id')
     > notifier = E(cf).getNotifier()
     > E(notifier).getUpdateSince()
@@ -111,7 +111,7 @@ Lock Lp Tokens
     
     -> Approve Offer
     
-    agoric wallet cli %
+    agoric repl %
     > E(notifier).getUpdateSince()
 
 Update Boundaries (30%)
@@ -124,7 +124,7 @@ Update Boundaries (30%)
     
     -> Approve Offer
     
-    agoric wallet cli %
+    agoric repl %
     > E(notifier).getUpdateSince()
 
 Move Price Down (15%)
@@ -137,7 +137,7 @@ Move Price Down (15%)
 
     -> Approve Offer
 
-    agoric wallet cli %
+    agoric repl %
     > E(notifier).getUpdateSince()
 
 Move Price Down (10%)
@@ -150,7 +150,7 @@ Move Price Down (10%)
 
     -> Approve Offer
 
-    agoric wallet cli %
+    agoric repl %
     > E(notifier).getUpdateSince()
 
 Withdraw Liquidity
@@ -160,7 +160,7 @@ Withdraw Liquidity
 
     -> Approve Offer
 
-    agoric wallet cli %
+    agoric repl %
     > E(notifier).getUpdateSince()
 
 
@@ -176,7 +176,7 @@ Initiate stopLoss Contract
     terminal #3 stop-loss-amm %
     > agoric deploy contract/deploy/initStopLoss.js
     
-    agoric wallet cli %
+    agoric repl %
     > cf = E(home.scratch).get('stop_loss_creator_facet_scratch_id')
     > notifier = E(cf).getNotifier()
     > E(notifier).getUpdateSince()
@@ -188,7 +188,7 @@ Lock Lp Tokens
     
     -> Approve Offer
     
-    agoric wallet cli %
+    agoric repl %
     > E(notifier).getUpdateSince()
 
 Lock Lp Tokens
@@ -198,7 +198,7 @@ Lock Lp Tokens
     
     -> Approve Offer
     
-    agoric wallet cli %
+    agoric repl %
     > E(notifier).getUpdateSince()
 
 Withdraw Liquidity
@@ -208,7 +208,7 @@ Withdraw Liquidity
 
     -> Approve Offer
 
-    agoric wallet cli %
+    agoric repl %
     > E(notifier).getUpdateSince()
 
 
@@ -224,7 +224,7 @@ Initiate stopLoss Contract
     terminal #3 stop-loss-amm %
     > agoric deploy contract/deploy/initStopLoss.js
     
-    agoric wallet cli %
+    agoric repl %
     > cf = E(home.scratch).get('stop_loss_creator_facet_scratch_id')
     > notifier = E(cf).getNotifier()
     > E(notifier).getUpdateSince()
@@ -236,7 +236,7 @@ Lock Lp Tokens
     
     -> Approve Offer
     
-    agoric wallet cli %
+    agoric repl %
     > E(notifier).getUpdateSince()
 
 Withdraw Lp Tokens
@@ -246,7 +246,7 @@ Withdraw Lp Tokens
 
     -> Approve Offer
     
-    agoric wallet cli %
+    agoric repl %
     > E(notifier).getUpdateSince()
 
 
@@ -262,7 +262,7 @@ Initiate stopLoss Contract
     terminal #3 stop-loss-amm %
     > agoric deploy contract/deploy/initStopLoss.js
     
-    agoric wallet cli %
+    agoric repl %
     > cf = E(home.scratch).get('stop_loss_creator_facet_scratch_id')
     > notifier = E(cf).getNotifier()
     > E(notifier).getUpdateSince()
@@ -274,7 +274,7 @@ Lock Lp Tokens
     
     -> Approve Offer
     
-    agoric wallet cli %
+    agoric repl %
     > E(notifier).getUpdateSince()
     
 Update Boundaries out of Price range
@@ -284,7 +284,7 @@ Update Boundaries out of Price range
     
     -> Approve Offer
     
-    agoric wallet cli %
+    agoric repl %
     > E(notifier).getUpdateSince()
   
  Withdraw Lp Tokens
@@ -294,7 +294,7 @@ Update Boundaries out of Price range
 
     -> Approve Offer
     
-    agoric wallet cli %
+    agoric repl %
     > E(notifier).getUpdateSince()
 
 

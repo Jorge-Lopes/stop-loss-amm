@@ -45,7 +45,6 @@ const start = async (zcf) => {
   const secondaryBrand = zcf.getBrandForIssuer(secondaryIssuer);
   const lpTokenBrand = zcf.getBrandForIssuer(lpTokenIssuer);
 
-  // phaseSnapshot used for assertAllocationStatePhase
   let phaseSnapshot = ALLOCATION_PHASE.IDLE;
   let boundariesSnapshot = {};
 
@@ -103,7 +102,6 @@ const start = async (zcf) => {
     assertInitialBoundariesRange(boundaries, quoteAmountOut)
   }
 
-  // Initiate listening
   const {
     boundaryWatcherPromise,
     updateBoundaries,
@@ -131,7 +129,7 @@ const start = async (zcf) => {
   schedule().catch(error => {
     updateAllocationState(ALLOCATION_PHASE.ERROR);
     tracer('Schedule encountered an error', error);
-  }); // Notify user
+  });
 
   const makeLockLPTokensInvitation = () => {
     const lockLPTokens = (creatorSeat) => {
@@ -309,7 +307,6 @@ const start = async (zcf) => {
     );
   };
 
-  // Contract facets
   const publicFacet = Far('public facet', {
     getBalanceByBrand,
   });
