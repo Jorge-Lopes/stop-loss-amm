@@ -18,7 +18,7 @@ const withdrawLpTokens = async (homeP) => {
     invitation: E(stopLossCreatorFacet).makeWithdrawLpTokensInvitation(),
     proposalTemplate: {
       want: {
-        Liquidity: {
+        LpToken: {
           pursePetname: 'LpToken Purse',
           value: 0n,
         }

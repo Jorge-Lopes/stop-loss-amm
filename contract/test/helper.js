@@ -287,6 +287,11 @@ export const getBoundaries = async (
 };
 
 /**
+ * This method executes a trade on the AMM where it puts 'In' some percentage
+ * of total Secondary allocation to shift price upwards in the 'fromCentral'
+ * priceAuthority of the pool. This trade results in the price moving up more
+ * than the specified percentage, boundaryMargin parameter, so we would be
+ * able to test our contract.
  *
  * @param {ZoeService} zoe
  * @param {XYKAMMPublicFacet} ammPublicFacet
@@ -318,6 +323,11 @@ export const moveFromCentralPriceUpOneTrade = async (zoe,
 
 
 /**
+ * This method executes a trade on the AMM where it puts 'In' some percentage
+ * of total Central allocation to shift price upwards in the 'fromCentral'
+ * priceAuthority of the pool. This trade results in the price moving up more
+ * than the specified percentage, boundaryMargin parameter, so we would be
+ * able to test our contract.
  *
  * @param {ZoeService} zoe
  * @param {XYKAMMPublicFacet} ammPublicFacet

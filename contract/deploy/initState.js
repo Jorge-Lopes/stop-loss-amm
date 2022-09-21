@@ -27,7 +27,7 @@ const initState = async (homeP, { bundleSource, pathResolve }) => {
   console.log('Getting issuers and liquidity...');
   const [secondaryIssuer, secondaryLiquidity] = await Promise.all([
     E(secondaryCreatorFacet).getIssuer(),
-    getLiquidityFromFaucet(secondaryCreatorFacet, 100n, 'SCR'),
+    getLiquidityFromFaucet(secondaryCreatorFacet, 1000n, 'SCR'),
   ]);
 
   const lpTokenIssuer = await addIssuerToAmm(ammPublicFacet, secondaryIssuer, 'SCR');

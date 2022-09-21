@@ -18,9 +18,9 @@ const lockLpTokens = async (homeP) => {
     invitation: E(secondaryCreatorFacet).makeLockLPTokensInvitation(),
     proposalTemplate: {
       give: {
-        Liquidity: {
+        LpToken: {
           pursePetname: 'LpToken Purse',
-          value: 20n * 10n ** 6n, // 1 unit of LP Token
+          value: 10n * 10n ** 6n, // 1 unit of LP Token
         }
       }
     },

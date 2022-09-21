@@ -7,6 +7,16 @@ import { assertBoundaryShape } from './assertionHelper.js';
 const trace = makeTracer('Boundary Watcher Module');
 
 /**
+ * This the main module contains logic for being notified when the price
+ * hits either of the boundaries.
+ *
+ * This modules achieves the described behaviour by making use of built agoric
+ * feature like priceAuthoritiy and promiseKit. We create two mutable quotes
+ * for both upper and lower boundaries. Then wait for one of them to resolve.
+ * We are also able to update the triggerPoints for either of the mutableQuotes,
+ * as the name suggests 'mutable'. We create a promiseKit then return its promise
+ * to the caller of this module so that they know price hit one of the boundaries
+ * when the promise we return to them resolves.
  *
  * @param {PriceAuthority} fromCentralPriceAuthority
  * @param boundaries
