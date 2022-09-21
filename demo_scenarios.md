@@ -1,60 +1,89 @@
 # Demonstration scenarios
 
+## Initiate Environment
+
+Start Agoric local chain
+
+    terminal #1 cosmic-swingset %
+    > make scenario2-setup BASE_PORT:8000 NUM_SOLO=2
+
+Run Agoric client
+    
+    terminal #2 cosmic-swingset %
+    > make scenario2-run-client
+
+Initiate State
+    
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/initState.js
+
+Add AMM pool and define boundaries (20%)
+
+    terminal #3 stop-loss-amm %
+    > stop-loss-amm % agoric deploy contract/deploy/addPool.js
+ 
+    terminal #4 t1 %
+    > agoric open --no-browser --repl
+
+    -> Approve Offer
+
+Check Environment 
+
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/getFromCentralPrice.js
+
+
 ## Scenario 1
 
 ### Description:
 
 ### Steps:
 
-Start Agoric local chain
-
-> cosmic-swingset % make scenario2-setup BASE_PORT:8000 NUM_SOLO=2
-
-Run Agoric client
-
-> cosmic-swingset % make scenario2-run-client
-
-Initiate State
-
-> stop-loss-amm % agoric deploy contract/deploy/initState.js
-
-Add AMM pool and define boundaries (20%)
-
-> stop-loss-amm % agoric deploy contract/deploy/addPool.js
-> t1 % agoric open --no-browser --repl
-
-    -> Approve Offer
-
-> stop-loss-amm % agoric deploy contract/deploy/getFromCentralPrice.js
+Initiate Environment 
 
 Initiate stopLoss Contract
 
-> stop-loss-amm % agoric deploy contract/deploy/initStopLoss.js
-
-    -> cf = E(home.scratch).get('stop_loss_creator_facet_scratch_id')
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/initStopLoss.js
+    
+    agoric wallet cli %
+    > cf = E(home.scratch).get('stop_loss_creator_facet_scratch_id')
     > notifier = E(cf).getNotifier()
     > E(notifier).getUpdateSince()
 
 Lock Lp Tokens
 
-> stop-loss-amm % agoric deploy contract/deploy/lockLpTokens.js
-
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/lockLpTokens.js
+    
     -> Approve Offer
+    
+    agoric wallet cli %
     > E(notifier).getUpdateSince()
 
 Move Price Up (15%)
 
-> stop-loss-amm % agoric deploy contract/deploy/movePriceUp.js
+    Update <TRADE_MARGIN> to 15 at movePriceUp.js
+    const TRADE_MARGIN = 15n;
+
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/movePriceUp.js
 
     -> Approve Offer
+
+    agoric wallet cli %
     > E(notifier).getUpdateSince()
 
 Withdraw Liquidity
 
-> stop-loss-amm % agoric deploy contract/deploy/withdrawLiquidity.js
+    terminal #3 stop-loss-amm %
+    > stop-loss-amm % agoric deploy contract/deploy/withdrawLiquidity.js
 
     -> Approve Offer
+
+    agoric wallet cli %
     > E(notifier).getUpdateSince()
+
 
 ## Scenario 2
 
@@ -62,125 +91,124 @@ Withdraw Liquidity
 
 ### Steps:
 
-Start local chain
-
-> cosmic-swingset % make scenario2-setup BASE_PORT:8000 NUM_SOLO=2
-
-Run Agoric client
-
-> cosmic-swingset % make scenario2-run-client
-
-Initiate State
-
-> stop-loss-amm % agoric deploy contract/deploy/initState.js
-
-Add AMM pool and define boundaries (20%)
-
-> stop-loss-amm % agoric deploy contract/deploy/addPool.js
-> t1 % agoric open --no-browser --repl
-
-    -> Approve Offer
-
-> stop-loss-amm % agoric deploy contract/deploy/getFromCentralPrice.js
+Initiate Environment 
 
 Initiate stopLoss Contract
 
-> stop-loss-amm % agoric deploy contract/deploy/initStopLoss.js
-
-    -> cf = E(home.scratch).get('stop_loss_creator_facet_scratch_id')
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/initStopLoss.js
+    
+    agoric wallet cli %
+    > cf = E(home.scratch).get('stop_loss_creator_facet_scratch_id')
     > notifier = E(cf).getNotifier()
     > E(notifier).getUpdateSince()
 
 Lock Lp Tokens
 
-> stop-loss-amm % agoric deploy contract/deploy/lockLpTokens.js
-
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/lockLpTokens.js
+    
     -> Approve Offer
+    
+    agoric wallet cli %
     > E(notifier).getUpdateSince()
 
 Update Boundaries (30%)
 
-> stop-loss-amm % agoric deploy contract/deploy/updateBoundaries.js
+    Update Boundaries to 30n at updateBoundaries.js
+    AmountMath.make(istBrand, 10n ** 6n), secondaryBrand, 30n);
 
-    -> Approve Offer //"Something went wrong"
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/updateBoundaries.js
+    
+    -> Approve Offer
+    
+    agoric wallet cli %
     > E(notifier).getUpdateSince()
 
 Move Price Down (15%)
 
-> stop-loss-amm % agoric deploy contract/deploy/getFromCentralPrice.js
-> stop-loss-amm % agoric deploy contract/deploy/movePriceDown.js
+    Update <TRADE_MARGIN> to 15 at movePriceDown.js
+    const TRADE_MARGIN = 15n;
 
-    -> Approve Offer //Explain the IST payment
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/movePriceDown.js
 
-> stop-loss-amm % agoric deploy contract/deploy/getFromCentralPrice.js
+    -> Approve Offer
+
+    agoric wallet cli %
+    > E(notifier).getUpdateSince()
 
 Move Price Down (10%)
 
-> stop-loss-amm % agoric deploy contract/deploy/movePriceDown.js
+    Update <TRADE_MARGIN> to 10 at movePriceDown.js
+    const TRADE_MARGIN = 10n;
+
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/movePriceDown.js
 
     -> Approve Offer
+
+    agoric wallet cli %
     > E(notifier).getUpdateSince()
 
 Withdraw Liquidity
 
-> stop-loss-amm % agoric deploy contract/deploy/withdrawLiquidity.js
+    terminal #3 stop-loss-amm %
+    > stop-loss-amm % agoric deploy contract/deploy/withdrawLiquidity.js
 
     -> Approve Offer
+
+    agoric wallet cli %
     > E(notifier).getUpdateSince()
+
 
 ## Scenario 3
 
 ### Description:
 
 ### Steps:
-Start Agoric local chain
 
-> cosmic-swingset % make scenario2-setup BASE_PORT:8000 NUM_SOLO=2
-
-Run Agoric client
-
-> cosmic-swingset % make scenario2-run-client
-
-Initiate State
-
-> stop-loss-amm % agoric deploy contract/deploy/initState.js
-
-Add AMM pool and define boundaries (20%)
-
-> stop-loss-amm % agoric deploy contract/deploy/addPool.js
-> t1 % agoric open --no-browser --repl
-
-    -> Approve Offer
-
-> stop-loss-amm % agoric deploy contract/deploy/getFromCentralPrice.js
+Initiate Environment 
 
 Initiate stopLoss Contract
 
-> stop-loss-amm % agoric deploy contract/deploy/initStopLoss.js
-
-    -> cf = E(home.scratch).get('stop_loss_creator_facet_scratch_id')
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/initStopLoss.js
+    
+    agoric wallet cli %
+    > cf = E(home.scratch).get('stop_loss_creator_facet_scratch_id')
     > notifier = E(cf).getNotifier()
     > E(notifier).getUpdateSince()
 
-Lock Lp Tokens (15n)
+Lock Lp Tokens
 
-> stop-loss-amm % agoric deploy contract/deploy/lockLpTokens.js
-
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/lockLpTokens.js
+    
     -> Approve Offer
+    
+    agoric wallet cli %
     > E(notifier).getUpdateSince()
 
-Lock Lp Tokens (15n)
+Lock Lp Tokens
 
-> stop-loss-amm % agoric deploy contract/deploy/lockLpTokens.js
-
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/lockLpTokens.js
+    
     -> Approve Offer
+    
+    agoric wallet cli %
     > E(notifier).getUpdateSince()
 
 Withdraw Liquidity
 
-> stop-loss-amm % agoric deploy contract/deploy/withdrawLiquidity.js
+    terminal #3 stop-loss-amm %
+    > stop-loss-amm % agoric deploy contract/deploy/withdrawLiquidity.js
 
     -> Approve Offer
+
+    agoric wallet cli %
     > E(notifier).getUpdateSince()
 
 ## Scenario 4
@@ -188,33 +216,37 @@ Withdraw Liquidity
 ### Description:
 
 ### Steps:
-Add Liquidity to Pool
 
-> stop-loss-amm % agoric deploy contract/deploy/addLiquidityToAMM.js
+Initiate Environment 
 
-    -> Approve Offer
+Initiate stopLoss Contract
 
-> stop-loss-amm % agoric deploy contract/deploy/getFromCentralPrice.js
-
-Initiate Stop Loss
-
-> stop-loss-amm % agoric deploy contract/deploy/initStopLoss.js
-
-    -> cf = E(home.scratch).get('stop_loss_creator_facet_scratch_id')
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/initStopLoss.js
+    
+    agoric wallet cli %
+    > cf = E(home.scratch).get('stop_loss_creator_facet_scratch_id')
     > notifier = E(cf).getNotifier()
     > E(notifier).getUpdateSince()
 
-Lock Lp Tokens (15n)
+Lock Lp Tokens
 
-> stop-loss-amm % agoric deploy contract/deploy/lockLpTokens.js
-
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/lockLpTokens.js
+    
     -> Approve Offer
+    
+    agoric wallet cli %
     > E(notifier).getUpdateSince()
 
 Withdraw Lp Tokens
-> stop-loss-amm % agoric deploy contract/deploy/withdrawLpTokens.js
+    
+    terminal #3 stop-loss-amm %
+    >stop-loss-amm % agoric deploy contract/deploy/withdrawLpTokens.js
 
     -> Approve Offer
+    
+    agoric wallet cli %
     > E(notifier).getUpdateSince()
 
 
