@@ -41,8 +41,6 @@ The user specifies the price boundaries and locks an amount of LP tokens in stop
 
 ### Steps:
 
-Initiate Environment 
-
 Initiate stopLoss Contract
 
     terminal #3 stop-loss-amm %
@@ -95,8 +93,6 @@ The user specifies the price boundaries and locks an amount of LP tokens in stop
 The amm pool price goes lower again, this time will hit the current lower boundary, which will trigger the contract to remove the user liquidity from the amm pool. The user will then withdraw his liquidity from the contract to his purse.
 
 ### Steps:
-
-Initiate Environment 
 
 Initiate stopLoss Contract
 
@@ -173,9 +169,7 @@ Withdraw Liquidity
 ### Description:
 The user specifies the price boundaries and locks an amount of LP tokens in stopLoss contract. Later the user locks an additional amount of LP tokens. Then the user will deliberately withdraw his liquidity, without waiting for the amm pool price to hit a boundary.
 
-### Steps:
-
-Initiate Environment 
+### Steps: 
 
 Initiate stopLoss Contract
 
@@ -225,8 +219,6 @@ The user specifies the price boundaries and locks an amount of LP tokens in stop
 
 ### Steps:
 
-Initiate Environment 
-
 Initiate stopLoss Contract
 
     terminal #3 stop-loss-amm %
@@ -261,11 +253,60 @@ Withdraw Lp Tokens
 ## Scenario 5
 
 ### Description:
+The user specifies the price boundaries and locks an amount of LP tokens in stopLoss contract. Later the user updates his boundaries range outside of the current amm pool price, which will trigger the contract to remove the user liquidity from the amm pool. The user will then withdraw his liquidity from the contract to his purse.
 
 ### Steps:
+
+Initiate stopLoss Contract
+
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/initStopLoss.js
+    
+    agoric wallet cli %
+    > cf = E(home.scratch).get('stop_loss_creator_facet_scratch_id')
+    > notifier = E(cf).getNotifier()
+    > E(notifier).getUpdateSince()
+
+Lock Lp Tokens
+
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/lockLpTokens.js
+    
+    -> Approve Offer
+    
+    agoric wallet cli %
+    > E(notifier).getUpdateSince()
+    
+Update Boundaries out of Price range
+
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/updateBoundaryOutsideRange.js
+    
+    -> Approve Offer
+    
+    agoric wallet cli %
+    > E(notifier).getUpdateSince()
+  
+ Withdraw Lp Tokens
+    
+    terminal #3 stop-loss-amm %
+    >stop-loss-amm % agoric deploy contract/deploy/withdrawLpTokens.js
+
+    -> Approve Offer
+    
+    agoric wallet cli %
+    > E(notifier).getUpdateSince()
+
 
 ## Scenario 6
 
 ### Description:
+The user initiate the stopLoss contract with the boundaries range outside of the current amm pool price, which will return an error
 
 ### Steps:
+
+Initiate stopLoss Contract with faulty boundaries
+
+    terminal #3 stop-loss-amm %
+    > agoric deploy contract/deploy/initFaultyStopLoss.js
+    
