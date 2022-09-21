@@ -6,6 +6,7 @@ Start Agoric local chain
 
     terminal #1 cosmic-swingset %
     > make scenario2-setup
+    > make scenario2-run-chain-economy
 
 Run Agoric client
     
