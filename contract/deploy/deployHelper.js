@@ -82,7 +82,7 @@ export const makeDeployHelper = (zoe, bundleSource, pathResolve) => {
     const issuerKeywordRecord = harden({
       Central: centralIssuer,
       Secondary: secondaryIssuer,
-      Liquidity: lpTokenIssuer,
+      LpToken: lpTokenIssuer,
     });
 
     const installationP = await installContract(contractRoots.stopLoss);

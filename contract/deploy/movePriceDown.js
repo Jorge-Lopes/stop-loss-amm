@@ -8,7 +8,7 @@ const movePriceDown = async homeP => {
   /** @type {{zoe: ZoeService}} */
   const { wallet, agoricNames, zoe, board } = home;
 
-  const TRADE_MARGIN = 15n;
+  const TRADE_MARGIN = 25n;
 
   const { SECONDARY_ISSUER_BOARD_ID } = dappConstants;
 
@@ -16,12 +16,14 @@ const movePriceDown = async homeP => {
   const secodaryIssuerP = E(board).getValue(SECONDARY_ISSUER_BOARD_ID);
   const walletBridgerP = E(wallet).getBridge();
 
+  console.log('Fetching ammPublicFacet and secondaryBrand...');
   /** @type {[ammPublicFacet: XYKAMMPublicFacet, secondaryBrand: Brand]} */
   const [ammPublicFacet, secondaryBrand] = await Promise.all([
     E(zoe).getPublicFacet(ammInstanceP),
     E(secodaryIssuerP).getBrand()
   ]);
 
+  console.log('Getting the pool allocation...');
   const { Central: centralAmount } = await E(ammPublicFacet).getPoolAllocation(secondaryBrand);
   const { brand: centralBrand } = centralAmount;
 
@@ -47,7 +49,7 @@ const movePriceDown = async homeP => {
     },
   };
 
-  console.log('Making an offer to move the price down...');
+  console.log(`Making an offer to move the price down by ${TRADE_MARGIN}%...`);
   await E(walletBridgerP).addOffer(swapConfig);
   console.log('Please go to your wallet UI and approve the offer.');
 };

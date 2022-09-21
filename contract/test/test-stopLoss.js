@@ -2358,7 +2358,7 @@ test('amm-playaround-secondary-price-down', async (t) => {
   trace('Price Before', getAmountOut(quoteBefore));
 
   console.log('Swapping Central For Secondary...');
-  await moveFromCentralPriceDownOneTrade(zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer, makeRatio(15n, centralR.brand));
+  await moveFromCentralPriceDownOneTrade(zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer, makeRatio(10n, centralR.brand));
   console.log('Done.');
 
   const quoteAfter = await E(fromCentral).quoteGiven(centralInUnit(1n), secondaryR.brand);
@@ -2409,6 +2409,116 @@ test('amm-playaround-secondary-price-up', async (t) => {
 
   const firstDifference = differenceInPercent(getAmountOut(quoteAfter), getAmountOut(quoteBefore));
   trace('Quantized After First Trade', firstDifference);
+
+  t.is('test', 'test');
+});
+
+test('amm-playaround-secondary-price-down-first-then-up', async (t) => {
+  const { zoe, amm, centralR, secondaryR } = await startServices(t);
+  const centralInitialValue = 40n;
+  const secondaryInitialValue = 80n;
+
+  /** @type XYKAMMPublicFacet */
+  const ammPublicFacet = amm.ammPublicFacet;
+
+  const { makeAmountBuilderInUnit } = t.context;
+
+  const { makeAmount: centralInUnit } = makeAmountBuilderInUnit(centralR.brand, centralR.displayInfo);
+  const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
+
+  const { /** @type Issuer */ lpTokenIssuer } = await startAmmPool(
+    t,
+    zoe,
+    ammPublicFacet,
+    centralR,
+    secondaryR,
+    'SCR',
+    centralInitialValue,
+    secondaryInitialValue,
+  );
+
+  /** @type {{fromCentral: PriceAuthority}} */
+  const { fromCentral } = await E(ammPublicFacet).getPriceAuthorities(secondaryR.brand);
+
+  const quoteBefore = await E(fromCentral).quoteGiven(centralInUnit(1n), secondaryR.brand);
+  trace('Price Before', getAmountOut(quoteBefore));
+
+  console.log('Swapping Central For Secondary...');
+  await moveFromCentralPriceDownOneTrade(zoe, ammPublicFacet, secondaryR,
+    centralR, lpTokenIssuer, makeRatio(10n, centralR.brand));
+  console.log('Done.');
+
+  const quoteAfter = await E(fromCentral).quoteGiven(centralInUnit(1n), secondaryR.brand);
+  trace('Price After Moving Down', getAmountOut(quoteAfter));
+
+  const firstDifference = differenceInPercent(getAmountOut(quoteAfter), getAmountOut(quoteBefore));
+  trace('Quantized Price After Moving Down', firstDifference);
+
+  console.log('Swapping Secondary For Central...');
+  await moveFromCentralPriceUpOneTrade(zoe, ammPublicFacet, secondaryR,
+    centralR, lpTokenIssuer, makeRatio(25n, secondaryR.brand));
+  console.log('Done.');
+
+  const quoteAfterPriceUp = await E(fromCentral).quoteGiven(centralInUnit(1n), secondaryR.brand);
+  trace('Price After Moving Up', getAmountOut(quoteAfterPriceUp));
+
+  const secondDifference = differenceInPercent(getAmountOut(quoteAfterPriceUp), getAmountOut(quoteBefore));
+  trace('Quantized Price After Moving Down', secondDifference);
+
+  t.is('test', 'test');
+});
+
+test('amm-playaround-secondary-price-up-first-then-down', async (t) => {
+  const { zoe, amm, centralR, secondaryR } = await startServices(t);
+  const centralInitialValue = 40n;
+  const secondaryInitialValue = 80n;
+
+  /** @type XYKAMMPublicFacet */
+  const ammPublicFacet = amm.ammPublicFacet;
+
+  const { makeAmountBuilderInUnit } = t.context;
+
+  const { makeAmount: centralInUnit } = makeAmountBuilderInUnit(centralR.brand, centralR.displayInfo);
+  const { makeAmount: secondaryInUnit } = makeAmountBuilderInUnit(secondaryR.brand, secondaryR.displayInfo);
+
+  const { /** @type Issuer */ lpTokenIssuer } = await startAmmPool(
+    t,
+    zoe,
+    ammPublicFacet,
+    centralR,
+    secondaryR,
+    'SCR',
+    centralInitialValue,
+    secondaryInitialValue,
+  );
+
+  /** @type {{fromCentral: PriceAuthority}} */
+  const { fromCentral } = await E(ammPublicFacet).getPriceAuthorities(secondaryR.brand);
+
+  const quoteBefore = await E(fromCentral).quoteGiven(centralInUnit(1n), secondaryR.brand);
+  trace('Price Before', getAmountOut(quoteBefore));
+
+  console.log('Swapping Secondary For Central...');
+  await moveFromCentralPriceUpOneTrade(zoe, ammPublicFacet, secondaryR,
+    centralR, lpTokenIssuer, makeRatio(5n, secondaryR.brand));
+  console.log('Done.');
+
+  const quoteAfter = await E(fromCentral).quoteGiven(centralInUnit(1n), secondaryR.brand);
+  trace('Price After Moving UP', getAmountOut(quoteAfter));
+
+  const firstDifference = differenceInPercent(getAmountOut(quoteAfter), getAmountOut(quoteBefore));
+  trace('Quantized Price After Moving UP', firstDifference);
+
+  console.log('Swapping Central For Secondary ...');
+  await moveFromCentralPriceDownOneTrade(zoe, ammPublicFacet, secondaryR,
+    centralR, lpTokenIssuer, makeRatio(25n, centralR.brand));
+  console.log('Done.');
+
+  const quoteAfterPriceDown = await E(fromCentral).quoteGiven(centralInUnit(1n), secondaryR.brand);
+  trace('Price After Moving DOWN', getAmountOut(quoteAfterPriceDown));
+
+  const secondDifference = differenceInPercent(getAmountOut(quoteAfterPriceDown), getAmountOut(quoteBefore));
+  trace('Quantized Price After Moving DOWN', secondDifference);
 
   t.is('test', 'test');
 });
