@@ -16,7 +16,8 @@ import {
 
 /*
   This test will execute all functions exported by ./ammLiquidity.js
-  Confirming that the amm instance created by ./setup.js is working properly as well as the functions to interact with this environment.
+  Confirming that the amm instance created by ./setup.js is working properly
+  as well as the functions to interact with this environment.
 */
 
 test.before(async (t) => {
@@ -171,7 +172,6 @@ test('amm add and remove liquidity', async (t) => {
     `poolAllocation after initialization`,
   );
 
-  // Add Liquidity to pool
   const centralValue = 30n;
   const secondaryValue = 70n;
 
@@ -205,8 +205,6 @@ test('amm add and remove liquidity', async (t) => {
     `poolAllocation after add liquidity`,
   );
 
-  // Remove liquidity using the Liquidity tokens
-
   const liquidityPayment = l1;
   const liquidityAmount = await E(lpTokenIssuer).getAmountOf(liquidityPayment);
   const liquidityValue = liquidityAmount.value
@@ -224,10 +222,8 @@ test('amm add and remove liquidity', async (t) => {
 
   const { Central: c2, Liquidity: l2, Secondary: s2 } = await payoutRemove;
 
-  // 30K is 3/4 of liquidity. Should get 3/4 of Central and Secondary.
   await assertPayouts(l2, 0n, c2, (30n * 100000000n), s2, (60n * 100000000n));
 
-  // Allocation: central(40 - 30), liquidity(0 + 30), secondary(80-60)
   t.deepEqual(
     await E(amm.ammPublicFacet).getPoolAllocation(secondaryR.brand),
     allocations(10n, 3000n, 20n),

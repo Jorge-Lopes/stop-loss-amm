@@ -14,7 +14,6 @@ import { setupAMMBootstrap, setUpZoeForTest } from '@agoric/inter-protocol/test/
 
 /*
   Code imported from: @agoric/run-protocol/test/amm/vpool-xyk-amm/setup.js
-  When finished, consider importing the file instead of duplicating it this repository
   Purpose:
     setup an zoe instace for testing purposes,
     setup amm bootstap to get access to produce and consume functions,
