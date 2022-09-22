@@ -15,6 +15,10 @@ import {
 } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { UPDATED_BOUNDARY_MESSAGE } from '../src/constants.js';
 
+/**
+ * This file export functions that allows an easier interaction with the testing environment.
+ */
+
 export const makeAssets = () => {
   const centralR = makeIssuerKit(
     'Central',
@@ -50,7 +54,6 @@ export async function startServices(t) {
     secondaryR,
   };
 }
-
 /**
  * @param t
  * @param zoe

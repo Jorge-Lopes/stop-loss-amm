@@ -549,11 +549,11 @@ test('withdraw-liquidity', async (t) => {
     E(notifierP).getUpdateSince(),
   ]);
 
-    // Check notifier
-    t.deepEqual(notificationAfterWithdraw.phase, ALLOCATION_PHASE.WITHDRAWN);
-    t.deepEqual(notificationAfterWithdraw.lpBalance, withdrawLiquidityBalance);
-    t.deepEqual(notificationAfterWithdraw.liquidityBalance.central, withdrawCentralBalance);
-    t.deepEqual(notificationAfterWithdraw.liquidityBalance.secondary, withdrawSecondaryBalance);
+  // Check notifier
+  t.deepEqual(notificationAfterWithdraw.phase, ALLOCATION_PHASE.WITHDRAWN);
+  t.deepEqual(notificationAfterWithdraw.lpBalance, withdrawLiquidityBalance);
+  t.deepEqual(notificationAfterWithdraw.liquidityBalance.central, withdrawCentralBalance);
+  t.deepEqual(notificationAfterWithdraw.liquidityBalance.secondary, withdrawSecondaryBalance);
 });
 
 test('trigger-lp-removal-price-moves-above-upper', async (t) => {
