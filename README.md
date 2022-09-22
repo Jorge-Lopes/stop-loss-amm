@@ -4,6 +4,13 @@ AMM Liquidity Provider Stop Loss Contract
 Bounty:
 https://gitcoin.co/issue/28953
 
+## Description
+The stopLoss contract allows the creator to lock an amount of LP tokens and specify the boundaries for a range price. When the price of the respective amm pool hits one of the boundaries (upper or lower), it will trigger the removal of the user assets (central and secondary tokens) from the amm pool, in exchange for the LP tokens.
+The creator will be able to withdraw his assets from this contract to his purse.
+
+At any moment the creator is allowed to withdraw his LP tokens, withdraw his assets from the amm pool and update the price range boundaries.
+When updating the boundaries, if the creator specifies a range outside of the current amm pool price, it will trigger the removal of the assets from the amm pool.
+
 ## Setup
 
 Please make sure you install the agoric-sdk first.
