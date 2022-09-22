@@ -1,7 +1,4 @@
 import { E } from '@endo/far';
-import { setupAmmServices } from '../test/setup.js';
-import { unsafeMakeBundleCache } from '@agoric/swingset-vat/tools/bundleTool.js';
-import buildManualTimer from '@agoric/zoe/tools/manualTimer.js';
 import { AmountMath } from '@agoric/ertp/src/amountMath.js';
 
 const contractRoots = {

@@ -3,7 +3,7 @@ import '@agoric/zoe/tools/prepare-test-env.js';
 import test from 'ava';
 import { E } from '@endo/far';
 import { getAmountIn, getAmountOut } from '@agoric/zoe/src/contractSupport/priceQuote.js';
-import { AmountMath, makeIssuerKit, AssetKind } from '@agoric/ertp';
+import { AmountMath } from '@agoric/ertp';
 import { makeManualPriceAuthority } from '@agoric/zoe/tools/manualPriceAuthority.js';
 import { getBoundaries, makeAssets } from './helper.js';
 import buildManualTimer from '@agoric/zoe/tools/manualTimer.js';
@@ -444,9 +444,3 @@ test('mutableQuote-promises-rejected', async t => {
 
 });
 
-/**
- * Test Case
- * Update the one of the boundaries in a way that the updated boundary falls outside of the allowed price window
- * according to the current price. So the boundaryWatcher promise should resolve as soon as this update is made.
- * In real life this would lead to a trigger of an LP removal from AMM. Should we allow it?
- */

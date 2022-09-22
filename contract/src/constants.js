@@ -18,7 +18,6 @@ export const UPDATED_BOUNDARY_MESSAGE = 'Successfully updated boundaries';
  * REMOVING     - liquidity being removed from the amm pool to the stopLoss seat
  * REMOVED      - liquidity has been removed from the amm pool to the stopLoss seat
  * WITHDRAWN    - liquidity has benn withdrawn from the stopLoss seat by the user
- * FROZEN       - Liquidity or LP tokens frozen due to a rejected promise
  * ERROR        - error catched in a process
  */
 export const ALLOCATION_PHASE = ({
@@ -28,6 +27,5 @@ export const ALLOCATION_PHASE = ({
   REMOVING: 'removing',
   REMOVED: 'removed',
   WITHDRAWN: 'withdrawn',
-  FROZEN: 'frozen',
   ERROR: 'error,'
 });

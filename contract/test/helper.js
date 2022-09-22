@@ -10,14 +10,14 @@ import { getAmountOut } from '@agoric/zoe/src/contractSupport/priceQuote.js';
 import {
   floorMultiplyBy,
   makeRatio,
-  makeRatioFromAmounts, quantize,
+  makeRatioFromAmounts,
+  quantize,
 } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { UPDATED_BOUNDARY_MESSAGE } from '../src/constants.js';
 
-/*
-  This file act as a bridge beetween the tests and the functions exported by ./ammLiquidity.js,
-  the function makeAssertPayouts allow us to confirm if a payout returns what is expected;
-*/
+/**
+ * This file export functions that allows an easier interaction with the testing environment.
+ */
 
 export const makeAssets = () => {
   const centralR = makeIssuerKit(
@@ -54,7 +54,6 @@ export async function startServices(t) {
     secondaryR,
   };
 }
-
 /**
  * @param t
  * @param zoe
@@ -301,26 +300,35 @@ export const getBoundaries = async (
  * @param {Ratio} boundaryMargin
  * @returns {Promise<string>}
  */
-export const moveFromCentralPriceUpOneTrade = async (zoe,
-                                             ammPublicFacet,
-                                             secondaryR,
-                                             centralR,
-                                             lpTokenIssuer,
-                                             boundaryMargin) => {
-  const {
-    swapSecondaryForCentral,
-  } = await makeLiquidityInvitations(undefined, zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer);
+export const moveFromCentralPriceUpOneTrade = async (
+  zoe,
+  ammPublicFacet,
+  secondaryR,
+  centralR,
+  lpTokenIssuer,
+  boundaryMargin,
+) => {
+  const { swapSecondaryForCentral } = await makeLiquidityInvitations(
+    undefined,
+    zoe,
+    ammPublicFacet,
+    secondaryR,
+    centralR,
+    lpTokenIssuer,
+  );
 
-  const { Secondary: secondaryAmount } = await E(ammPublicFacet).getPoolAllocation(secondaryR.brand);
+  const { Secondary: secondaryAmount } = await E(
+    ammPublicFacet,
+  ).getPoolAllocation(secondaryR.brand);
 
   const tradeAmount = floorMultiplyBy(secondaryAmount, boundaryMargin);
-  const valueInUnit = tradeAmount.value / (10n ** BigInt(secondaryR.displayInfo.decimalPlaces));
+  const valueInUnit =
+    tradeAmount.value / 10n ** BigInt(secondaryR.displayInfo.decimalPlaces);
 
   await swapSecondaryForCentral(valueInUnit);
 
   return 'Success';
 };
-
 
 /**
  * This method executes a trade on the AMM where it puts 'In' some percentage
@@ -337,35 +345,50 @@ export const moveFromCentralPriceUpOneTrade = async (zoe,
  * @param {Ratio} boundaryMargin
  * @returns {Promise<void>}
  */
-export const moveFromCentralPriceDownOneTrade = async (zoe,
-                                               ammPublicFacet,
-                                               secondaryR,
-                                               centralR,
-                                               lpTokenIssuer,
-                                               boundaryMargin) => {
+export const moveFromCentralPriceDownOneTrade = async (
+  zoe,
+  ammPublicFacet,
+  secondaryR,
+  centralR,
+  lpTokenIssuer,
+  boundaryMargin,
+) => {
+  const { swapCentralForSecondary } = await makeLiquidityInvitations(
+    undefined,
+    zoe,
+    ammPublicFacet,
+    secondaryR,
+    centralR,
+    lpTokenIssuer,
+  );
 
-  const {
-    swapCentralForSecondary,
-  } = await makeLiquidityInvitations(undefined, zoe, ammPublicFacet, secondaryR, centralR, lpTokenIssuer);
-
-  const { Central: centralAmount } = await E(ammPublicFacet).getPoolAllocation(secondaryR.brand);
+  const { Central: centralAmount } = await E(ammPublicFacet).getPoolAllocation(
+    secondaryR.brand,
+  );
 
   const tradeAmount = floorMultiplyBy(centralAmount, boundaryMargin);
 
-  const valueToTrade = tradeAmount.value / (10n ** BigInt(centralR.displayInfo.decimalPlaces));
+  const valueToTrade =
+    tradeAmount.value / 10n ** BigInt(centralR.displayInfo.decimalPlaces);
 
   await swapCentralForSecondary(valueToTrade);
 
   return 'Success';
 };
 
-export const updateBoundariesAndCheckResult = async (t, zoe, stopLossCreatorFacet, newBoundaries) => {
+export const updateBoundariesAndCheckResult = async (
+  t,
+  zoe,
+  stopLossCreatorFacet,
+  newBoundaries,
+) => {
   const userSeat = await E(zoe).offer(
     E(stopLossCreatorFacet).makeUpdateConfigurationInvitation(),
     undefined,
     undefined,
-    harden({ boundaries: newBoundaries }));
-  console.log('zaaaa')
+    harden({ boundaries: newBoundaries }),
+  );
+  console.log('zaaaa');
   const offerResult = await E(userSeat).getOfferResult();
   t.deepEqual(offerResult, UPDATED_BOUNDARY_MESSAGE);
 };
@@ -380,7 +403,7 @@ export const differenceInPercent = (newPrice, oldPrice) => {
   let subtractInVal = newPrice.value - oldPrice.value;
   if (subtractInVal < 0n) subtractInVal = -1n * subtractInVal;
   const subtractedAmount = AmountMath.make(newPrice.brand, subtractInVal);
-  console.log('difference', subtractedAmount)
+  console.log('difference', subtractedAmount);
   const ratio = makeRatioFromAmounts(subtractedAmount, oldPrice);
   return quantize(ratio, 100n);
-}
+};

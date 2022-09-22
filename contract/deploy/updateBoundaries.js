@@ -1,6 +1,5 @@
 import dappConstants from '../dappConstants.js';
 import { E } from '@endo/far';
-import { floorMultiplyBy, makeRatio, makeRatioFromAmounts } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { AmountMath } from '@agoric/ertp/src/amountMath.js';
 import { getBoundaries } from '../test/helper.js';
 

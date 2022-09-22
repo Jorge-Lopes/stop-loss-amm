@@ -1,30 +1,19 @@
 // @ts-check
 import { E } from '@endo/far';
-import { makeLoopback } from '@endo/captp';
-import { makeFakeVatAdmin } from '@agoric/zoe/tools/fakeVatAdmin.js';
-import { makeZoeKit } from '@agoric/zoe';
 import buildManualTimer from '@agoric/zoe/tools/manualTimer.js';
-import {
-  makeAgoricNamesAccess,
-  makePromiseSpace,
-} from '@agoric/vats/src/core/utils.js';
 import * as Collect from '@agoric/inter-protocol/src/collect.js';
 import {
   setupAmm,
   startEconomicCommittee,
   setupReserve,
 } from '@agoric/inter-protocol/src/proposals/econ-behaviors.js';
-import {
-  installGovernance,
-  provideBundle,
-} from '@agoric/inter-protocol/test/supports.js';
+import { provideBundle } from '@agoric/inter-protocol/test/supports.js';
 import bundleSource from "@endo/bundle-source";
 import { resolve as importMetaResolve } from 'import-meta-resolve';
 import { setupAMMBootstrap, setUpZoeForTest } from '@agoric/inter-protocol/test/amm/vpool-xyk-amm/setup.js'
 
 /*
   Code imported from: @agoric/run-protocol/test/amm/vpool-xyk-amm/setup.js
-  When finished, consider importing the file instead of duplicating it this repository
   Purpose:
     setup an zoe instace for testing purposes,
     setup amm bootstap to get access to produce and consume functions,

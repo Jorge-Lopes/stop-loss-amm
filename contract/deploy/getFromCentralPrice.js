@@ -1,6 +1,6 @@
 import dappConstants from '../dappConstants.js';
 import { E } from '@endo/far';
-import { floorMultiplyBy, makeRatio, getAmountOut } from '@agoric/zoe/src/contractSupport/index.js';
+import { getAmountOut } from '@agoric/zoe/src/contractSupport/index.js';
 import { AmountMath } from '@agoric/ertp';
 
 const getFromCentralPrice = async (homeP) => {

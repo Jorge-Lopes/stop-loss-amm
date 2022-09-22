@@ -1,4 +1,3 @@
-import dappConstants from '../dappConstants.js';
 import { E } from '@endo/far';
 
 const addLiquidityToAMM = async homeP => {

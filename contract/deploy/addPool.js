@@ -1,6 +1,4 @@
-import { makeDeployHelper } from './deployHelper.js';
 import { E } from '@endo/far';
-import dappConstants from '../dappConstants.js';
 
 const addPool = async (homeP) => {
   const home = await homeP;
@@ -21,11 +19,11 @@ const addPool = async (homeP) => {
       give: {
         Central: {
           pursePetname: 'Agoric stable local currency',
-          value: 40n * 10n ** 6n, // 1 IST
+          value: 100n * 10n ** 6n, // 1 IST
         },
         Secondary: {
           pursePetname: 'Secondary Purse',
-          value: 80n * 10n ** 8n, // 2 SCR
+          value: 200n * 10n ** 8n, // 2 SCR
         }
       },
       want: {

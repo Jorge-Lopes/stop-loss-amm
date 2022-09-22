@@ -20,8 +20,18 @@ import { makeNotifierKit } from '@agoric/notifier';
 import { ALLOCATION_PHASE, BOUNDARY_WATCHER_STATUS, UPDATED_BOUNDARY_MESSAGE } from './constants.js';
 import { makeTracer } from '@agoric/inter-protocol/src/makeTracer.js';
 
-
 const tracer = makeTracer('StopLoss');
+
+/**
+ * This contract allows the creator to lock an amount of LP tokens and specify the boundaries for a range price.
+ * When the price of the respective amm pool hits one of the boundaries (upper or lower), it will trigger the
+ * removal of the user assets (central and secondary tokens) from the amm pool, in exchange for the LP tokens.
+ * The creator will be able to withdraw his assets from this contract to his purse.
+ * At any moment the creator is allowed to withdraw his LP tokens, withdraw his assets from the amm pool and
+ * update the price range boundaries.
+ * When updating the boundaries, if the creator specifies a range outside of the current amm pool price, it will
+ * trigger the removal of the assets from the amm pool.
+ */
 
 /**
  *
@@ -45,7 +55,7 @@ const start = async (zcf) => {
   const secondaryBrand = zcf.getBrandForIssuer(secondaryIssuer);
   const lpTokenBrand = zcf.getBrandForIssuer(lpTokenIssuer);
 
-  // phaseSnapshot used for assertAllocationStatePhase
+  // phaseSnapshot used for assertAllocationStatePhase()
   let phaseSnapshot = ALLOCATION_PHASE.IDLE;
   let boundariesSnapshot = {};
 
@@ -131,7 +141,25 @@ const start = async (zcf) => {
   schedule().catch(error => {
     updateAllocationState(ALLOCATION_PHASE.ERROR);
     tracer('Schedule encountered an error', error);
-  }); // Notify user
+  });
+
+  const makeUpdateConfigurationInvitation = () => {
+    /** @type OfferHandler */
+    const updateConfiguration = async (seat, offerArgs) => {
+      assertScheduledOrActive(phaseSnapshot);
+      assertUpdateConfigOfferArgs(offerArgs);
+      const { boundaries } = offerArgs;
+
+      const updateBoundaryResult = await updateBoundaries(boundaries);
+      assertUpdateSucceeded(updateBoundaryResult);
+      boundariesSnapshot = boundaries;
+      updateAllocationState(ALLOCATION_PHASE.ACTIVE);
+
+      return UPDATED_BOUNDARY_MESSAGE;
+    };
+
+    return zcf.makeInvitation(updateConfiguration, 'Update boundary configuration')
+  };
 
   const makeLockLPTokensInvitation = () => {
     const lockLPTokens = (creatorSeat) => {
@@ -162,6 +190,37 @@ const start = async (zcf) => {
       lockLPTokens,
       'Lock LP Tokens in stopLoss contract',
     );
+  };
+
+  const makeWithdrawLpTokensInvitation = () => {
+    const withdrawLpTokens = (creatorSeat) => {
+      assertProposalShape(creatorSeat, {
+        want: {LpToken: null},
+      });
+
+      assertActiveOrError(phaseSnapshot)
+
+      const lpTokenAmountAllocated = stopLossSeat.getAmountAllocated(
+        'LpToken',
+        lpTokenBrand,
+      )
+
+      creatorSeat.incrementBy(
+        stopLossSeat.decrementBy(
+          harden({LpToken: lpTokenAmountAllocated}),
+        ),
+      );
+
+      zcf.reallocate(creatorSeat, stopLossSeat);
+
+      creatorSeat.exit();
+
+      updateAllocationState(ALLOCATION_PHASE.WITHDRAWN);
+
+      return `LP Tokens withdraw to creator seat`;
+    };
+
+    return zcf.makeInvitation(withdrawLpTokens, 'withdraw Lp Tokens');
   };
 
   const makeWithdrawLiquidityInvitation = () => {
@@ -204,37 +263,6 @@ const start = async (zcf) => {
     };
 
     return zcf.makeInvitation(withdrawLiquidity, 'withdraw Liquidity');
-  };
-
-  const makeWithdrawLpTokensInvitation = () => {
-    const withdrawLpTokens = (creatorSeat) => {
-      assertProposalShape(creatorSeat, {
-        want: {LpToken: null},
-      });
-
-      assertActiveOrError(phaseSnapshot)
-
-      const lpTokenAmountAllocated = stopLossSeat.getAmountAllocated(
-        'LpToken',
-        lpTokenBrand,
-      )
-
-      creatorSeat.incrementBy(
-        stopLossSeat.decrementBy(
-          harden({LpToken: lpTokenAmountAllocated}),
-        ),
-      );
-
-      zcf.reallocate(creatorSeat, stopLossSeat);
-
-      creatorSeat.exit();
-
-      updateAllocationState(ALLOCATION_PHASE.WITHDRAWN);
-
-      return `LP Tokens withdraw to creator seat`;
-    };
-
-    return zcf.makeInvitation(withdrawLpTokens, 'withdraw Lp Tokens');
   };
 
   const removeLiquidityFromAmm = async () => {
@@ -284,24 +312,6 @@ const start = async (zcf) => {
     return removeOfferResult;
   };
 
-  const makeUpdateConfigurationInvitation = () => {
-    /** @type OfferHandler */
-    const updateConfiguration = async (seat, offerArgs) => {
-      assertScheduledOrActive(phaseSnapshot);
-      assertUpdateConfigOfferArgs(offerArgs);
-      const { boundaries } = offerArgs;
-
-      const updateBoundaryResult = await updateBoundaries(boundaries);
-      assertUpdateSucceeded(updateBoundaryResult);
-      boundariesSnapshot = boundaries;
-      updateAllocationState(ALLOCATION_PHASE.ACTIVE);
-
-      return UPDATED_BOUNDARY_MESSAGE;
-    };
-
-    return zcf.makeInvitation(updateConfiguration, 'Update boundary configuration')
-  };
-
   const getBalanceByBrand = (keyword, issuer) => {
     return stopLossSeat.getAmountAllocated(
       keyword,
@@ -309,16 +319,15 @@ const start = async (zcf) => {
     );
   };
 
-  // Contract facets
   const publicFacet = Far('public facet', {
     getBalanceByBrand,
   });
 
   const creatorFacet = Far('creator facet', {
-    makeLockLPTokensInvitation,
-    makeWithdrawLiquidityInvitation,
-    makeWithdrawLpTokensInvitation,
     makeUpdateConfigurationInvitation,
+    makeLockLPTokensInvitation,
+    makeWithdrawLpTokensInvitation,
+    makeWithdrawLiquidityInvitation,
     getNotifier: () => notifier,
   });
 
