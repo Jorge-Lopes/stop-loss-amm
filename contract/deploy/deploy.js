@@ -1,8 +1,8 @@
 // @ts-check
 
-import fs from 'fs';
 import '@agoric/zoe/exported.js';
-import { E } from '@endo/eventual-send';
+import { E } from '@endo/far';
+import { makeDeployHelper } from './deployHelper.js';
 
 export default async function deployContract(
   homePromise,
@@ -10,36 +10,77 @@ export default async function deployContract(
 ) {
 
   const home = await homePromise;
-  const {zoe, board,} = home;
+  /** @type {{zoe: ZoeService}} */
+  const { zoe, board, agoricNames, wallet } = home;
 
-  // bundle contracts address
-  const bundle = await bundleSource(pathResolve(`../src/stopLoss.js`));
+  const {
+    startFaucet,
+    addIssuerToAmm,
+    startStopLoss,
+    startAMMPool,
+    getLiquidityFromFaucet,
+  } = makeDeployHelper(zoe, bundleSource, pathResolve);
 
+  const ammInstanceP = E(agoricNames).lookup('instance', 'amm');
+  const walletBridgerP = E(wallet).getBridge();
 
-  // install contracts bundle through zoe
-  const installation = await E(zoe).install(bundle);
+  console.log('Starting faucets...')
+  const [secondaryFaucet, /** @type XYKAMMPublicFacet */ammPublicFacet] = await Promise.all([
+    startFaucet('SCR2', { decimalPlaces: 8 }),
+    E(zoe).getPublicFacet(ammInstanceP),
+  ]);
 
-  // get board ID of the instalation
-  const CONTRACT_NAME = 'stopLoss';
-  const BOARD_ID = await E(board).getId(installation);
+  const { creatorFacet: secondaryCreatorFacet, instance: secondaryInstance } = secondaryFaucet;
 
-  console.log('- SUCCESS! contracts code installed on Zoe');
-  console.log(`-- Contract Name: ${CONTRACT_NAME}`);
-  console.log(`-- Contract Board Id: ${BOARD_ID}`);
+  console.log('Getting issuers and liquidity...');
+  const [secondaryIssuer, secondaryLiquidity] = await Promise.all([
+    E(secondaryCreatorFacet).getIssuer(),
+    getLiquidityFromFaucet(secondaryCreatorFacet, 2n, 'SCR2'),
+  ]);
 
-  const dappConstants = {
-    CONTRACT_NAME, 
-    BOARD_ID, 
+  const lpTokenIssuer = await addIssuerToAmm(ammPublicFacet, secondaryIssuer, 'SCR2');
+
+  console.log('Getting board ids for issuers...');
+  const [SECONDARY_ISSUER_BOARD_ID, LP_TOKEN_ISSUER_BOARD_ID] = await Promise.all([
+    E(board).getId(secondaryIssuer),
+    E(board).getId(lpTokenIssuer),
+  ]);
+
+  console.log('Suggesting issuers...');
+  await Promise.all([
+    E(walletBridgerP).suggestIssuer('Secondary Purse2', SECONDARY_ISSUER_BOARD_ID),
+    E(walletBridgerP).suggestIssuer('LpToken Purse2', LP_TOKEN_ISSUER_BOARD_ID),
+  ]);
+
+  console.log('Depositing secondaryLiquidity...');
+  const secondaryPurseP = E(wallet).getPurse('Secondary Purse2');
+  await E(secondaryPurseP).deposit(secondaryLiquidity);
+
+  const addPoolConfig = {
+    id: `${Date.now()}`,
+    invitation: E(ammPublicFacet).addPoolInvitation(),
+    proposalTemplate: {
+      give: {
+        Central: {
+          pursePetname: 'Agoric stable local currency',
+          value: 1n * 10n ** 6n, // 1 IST
+        },
+        Secondary: {
+          pursePetname: 'Secondary Purse2',
+          value: 2n * 10n ** 8n, // 2 SCR
+        }
+      },
+      want: {
+        Liquidity: {
+          pursePetname: 'LpToken Purse2',
+          value: 100n,
+        }
+      },
+    },
   };
 
-  // record dappConstantes in a local file
-  const defaultsFolder = pathResolve(`../ui/src/conf`);
-  const defaultsFile = pathResolve(`../ui/src/conf/installationConstants.js`);
-  console.log('writing', defaultsFile);
-  const defaultsContents = `\
-// GENERATED FROM ${pathResolve('./deploy.js')}
-export default ${JSON.stringify(dappConstants, undefined, 2)};
-`;
-  await fs.promises.mkdir(defaultsFolder, { recursive: true });
-  await fs.promises.writeFile(defaultsFile, defaultsContents);
+  console.log('Adding new pool...');
+  await E(walletBridgerP).addOffer(addPoolConfig);
+  console.log('Please go to your wallet UI and approve the offer.')
+
 }

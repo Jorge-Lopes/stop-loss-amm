@@ -13,33 +13,33 @@
     "lint-fix-jessie": "eslint -c '.eslintrc-jessie.js' --fix '**/*.{js,jsx}'",
     "lint-check-jessie": "eslint -c '.eslintrc-jessie.js' '**/*.{js,jsx}'"
   },
-  "devDependencies": {
-    "eslint": "^7.32.0",
-    "eslint-config-airbnb-base": "^14.2.0",
-    "eslint-config-jessie": "^0.0.6",
-    "eslint-config-prettier": "^6.15.0",
-    "eslint-plugin-import": "^2.25.3",
-    "eslint-plugin-prettier": "^4.0.0",
-    "prettier": "^2.5.1",
-    "ava": "^3.15.0"
-  },
   "dependencies": {
-    "@endo/bundle-source": "^2.1.1",
-    "@agoric/assert": "beta",
-    "@agoric/ertp": "beta",
-    "@endo/eventual-send": "^0.14.8",
-    "@endo/init": "^0.5.37",
-    "@endo/marshal": "^0.6.3",
-    "@agoric/notifier": "beta",
-    "@agoric/store": "beta",
-    "@endo/far": "0.2.3",
-    "@agoric/zoe": "beta"
+    "@agoric/assert": "^0.4.0",
+    "@agoric/ertp": "^0.14.2",
+    "@agoric/nat": "^4.1.0",
+    "@agoric/notifier": "^0.4.0",
+    "@agoric/store": "^0.7.2",
+    "@agoric/zoe": "^0.24.0",
+    "@endo/far": "^0.2.9",
+    "@endo/nat": "^4.1.18",
+    "@endo/promise-kit": "^0.2.47",
+    "@agoric/inter-protocol": "0.11.0"
+  },
+  "devDependencies": {
+    "@agoric/deploy-script-support": "^0.9.0",
+    "@endo/init": "^0.5.47",
+    "@fast-check/ava": "^1.0.1",
+    "ava": "^4.3.1",
+    "c8": "^7.11.0",
+    "deep-object-diff": "^1.1.7",
+    "import-meta-resolve": "^1.1.1"
   },
   "ava": {
     "files": [
-      "test/**/test-*.js"
+      "test/test-stopLoss.js"
     ],
-    "timeout": "10m"
+    "timeout": "10m",
+    "workedThreads": false
   },
   "keywords": [],
   "repository": {
@@ -52,16 +52,8 @@
     "url": "https://github.com/Agoric/agoric/issues"
   },
   "homepage": "https://github.com/Agoric/agoric#readme",
-  "eslintConfig": {
-    "extends": [
-      "@agoric"
-    ]
-  },
   "prettier": {
     "trailingComma": "all",
     "singleQuote": true
-  },
-  "eslintIgnore": [
-    "dappConstants.js"
-  ]
+  }
 }

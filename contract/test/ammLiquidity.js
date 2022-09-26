@@ -5,36 +5,59 @@ import { AmountMath } from '@agoric/ertp';
 
 /*
   File adapted from: @agoric/run-protocol/test/amm/vpool-xyk-amm/test-liquidity.js
-  When finished, consider importing the file instead of duplicating it this repository
-  Purpose:
-    Create function to interact with the AMM instace, such as:
-      - add pool
-      - add liquidity
-      - remove liquidity
-      - swap
+  Its purpose is to create a testing envioronment by exporting functions to interact with an AMM instace.
 */
 
 /**
- *
- * @param {ERef<ZoeService>} zoe
- * @param {GovernedPublicFacet<XYKAMMPublicFacet>} ammPublicFacet
+ * @param t
+ * @param {ZoeService} zoe
+ * @param {XYKAMMPublicFacet} ammPublicFacet
  * @param {{ mint: Mint; issuer: Issuer; brand: Brand; displayInfo: DisplayInfo }} secondaryR
  * @param {{ mint: Mint; issuer: Issuer; brand: Brand; displayInfo: DisplayInfo }} centralR
- * @param {*} liquidityIssuer
+ * @param {*} lpTokenIssuer
  * @returns
  */
 export const makeLiquidityInvitations = async (
+  t,
   zoe,
   ammPublicFacet,
   secondaryR,
   centralR,
-  liquidityIssuer,
+  lpTokenIssuer,
 ) => {
-  const makeCentral = (value) => AmountMath.make(centralR.brand, value);
-  const makeSecondary = (value) => AmountMath.make(secondaryR.brand, value);
-  const liquidityBrand = await E(liquidityIssuer).getBrand();
-  const liquidityAmounth = (value) =>
-    AmountMath.make(liquidityBrand, value);
+  const makeCentral = (value) => AmountMath.make(centralR.brand, value * 10n ** BigInt(centralR.displayInfo.decimalPlaces));
+  const makeSecondary = (value) => AmountMath.make(secondaryR.brand, value * 10n ** BigInt(secondaryR.displayInfo.decimalPlaces));
+  const lpTokenBrand = await E(lpTokenIssuer).getBrand();
+
+  const initPool = async (secondaryValue, centralValue) => {
+    const addPoolInvitation = E(ammPublicFacet).addPoolInvitation();
+
+    const proposal = harden({
+      give: {
+        Secondary: makeSecondary(secondaryValue),
+        Central: makeCentral(centralValue),
+      },
+      want: { Liquidity: AmountMath.make(lpTokenBrand, 1000n) },
+    });
+    const payments = {
+      Secondary: secondaryR.mint.mintPayment(makeSecondary(secondaryValue)),
+      Central: centralR.mint.mintPayment(makeCentral(centralValue)),
+    };
+
+    /** @type UserSeat */
+    const addLiquiditySeat = await E(zoe).offer(
+      addPoolInvitation,
+      proposal,
+      payments,
+    );
+    t.is(
+      await E(addLiquiditySeat).getOfferResult(),
+      'Added liquidity.',
+      `Added Secondary and Central Liquidity`,
+    );
+
+    return { seat: addLiquiditySeat, lpTokenIssuer };
+  };
 
   const addLiquidity = async (secondary, central) => {
     const addLiquidityInvitation = E(
@@ -47,7 +70,7 @@ export const makeLiquidityInvitations = async (
     const centralPayment = centralR.mint.mintPayment(makeCentral(central));
 
     const proposal = harden({
-      want: { Liquidity: liquidityAmounth(1000n) },
+      want: { Liquidity: AmountMath.make(lpTokenBrand, 1000n) },
       give: {
         Secondary: makeSecondary(secondary),
         Central: makeCentral(central),
@@ -67,20 +90,20 @@ export const makeLiquidityInvitations = async (
     return E(addLiquiditySeat).getPayouts();
   };
 
-  const removeLiquidity = async (liquidityPayment, liquidity) => {
+  const removeLiquidity = async (lpTokenPayment, lpTokenValue) => {
     const removeLiquidityInvitation = E(
       ammPublicFacet,
     ).makeRemoveLiquidityInvitation();
 
-    const emptyLiquidity = liquidityAmounth(liquidity);
+    const lpTokenAmount = AmountMath.make(lpTokenBrand, lpTokenValue);
     const proposal = harden({
-      give: { Liquidity: emptyLiquidity },
+      give: { Liquidity: lpTokenAmount },
       want: {
         Secondary: makeSecondary(0n),
         Central: makeCentral(0n),
       },
     });
-    const payment = { Liquidity: liquidityPayment };
+    const payment = { Liquidity: lpTokenPayment };
 
     const addLiquiditySeat = await E(zoe).offer(
       removeLiquidityInvitation,
@@ -97,20 +120,9 @@ export const makeLiquidityInvitations = async (
     const { value } = await E(invitationIssuer).getAmountOf(swapInvitation);
 
     assert(Array.isArray(value)); // non-fungible
-    const [invitationValue] = value;
-    const swapPublicFacet = await E(zoe).getPublicFacet(
-      invitationValue.instance,
-    );
-
-    const { amountOut: centralAmountOut } = await E(
-      swapPublicFacet,
-    ).getInputPrice(
-      makeSecondary(secondaryValueIn),
-      AmountMath.makeEmpty(centralR.brand),
-    );
 
     const secondaryForCentralProposal = harden({
-      want: { Out: centralAmountOut },
+      want: { Out: AmountMath.makeEmpty(centralR.brand) },
       give: { In: makeSecondary(secondaryValueIn) },
     });
 
@@ -128,5 +140,39 @@ export const makeLiquidityInvitations = async (
     return swapSeat;
   };
 
-  return { addLiquidity, removeLiquidity, swapSecondaryForCentral };
+  const swapCentralForSecondary = async (centralValueIn) => {
+    const invitationIssuer = await E(zoe).getInvitationIssuer();
+    const swapInvitation = E(ammPublicFacet).makeSwapInInvitation();
+    const { value } = await E(invitationIssuer).getAmountOf(swapInvitation);
+
+    assert(Array.isArray(value)); // non-fungible
+
+    const centralForSecondaryProposal = harden({
+      want: { Out: AmountMath.makeEmpty(secondaryR.brand) },
+      give: { In: makeCentral(centralValueIn) },
+    });
+
+    const centralPayment = centralR.mint.mintPayment(
+      makeCentral(centralValueIn),
+    );
+    const centralForSecondaryPayments = harden({ In: centralPayment});
+
+    const swapSeat = await E(zoe).offer(
+      swapInvitation,
+      centralForSecondaryProposal,
+      centralForSecondaryPayments,
+    );
+
+    return swapSeat;
+  };
+
+  return harden({
+    initPool,
+    addLiquidity,
+    removeLiquidity,
+    swapSecondaryForCentral,
+    swapCentralForSecondary,
+    makeCentral,
+    makeSecondary,
+  });
 };
