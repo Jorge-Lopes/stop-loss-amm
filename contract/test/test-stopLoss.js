@@ -119,6 +119,7 @@ test('lock-lpTokens', async (t) => {
   });
 
   const { creatorFacet, publicFacet } = await startStopLoss(
+    t,
     zoe,
     issuerKeywordRecord,
     terms,
@@ -219,6 +220,7 @@ test('lock-additional-lpTokens', async (t) => {
   });
 
   const { creatorFacet, publicFacet } = await startStopLoss(
+    t,
     zoe,
     issuerKeywordRecord,
     terms,
@@ -360,6 +362,7 @@ test('withdraw-locked-LpTokens ', async (t) => {
   });
 
   const { creatorFacet, publicFacet } = await startStopLoss(
+    t,
     zoe,
     issuerKeywordRecord,
     terms,
@@ -489,6 +492,7 @@ test('withdraw-liquidity', async (t) => {
   });
 
   const { creatorFacet, publicFacet } = await startStopLoss(
+    t,
     zoe,
     issuerKeywordRecord,
     terms,
@@ -621,6 +625,7 @@ test('trigger-lp-removal-price-moves-above-upper', async (t) => {
   });
 
   const { creatorFacet, publicFacet } = await startStopLoss(
+    t,
     zoe,
     issuerKeywordRecord,
     terms,
@@ -752,6 +757,7 @@ test('trigger-lp-removal-price-moves-below-lower', async (t) => {
   });
 
   const { creatorFacet, publicFacet } = await startStopLoss(
+    t,
     zoe,
     issuerKeywordRecord,
     terms,
@@ -883,6 +889,7 @@ test('update-boundaries-price-moves-below-old-lower-boundary', async (t) => {
   });
 
   const { creatorFacet, publicFacet } = await startStopLoss(
+    t,
     zoe,
     issuerKeywordRecord,
     terms,
@@ -1031,6 +1038,7 @@ test('update-boundaries-price-moves-above-old-upper-boundary', async (t) => {
   });
 
   const { creatorFacet, publicFacet } = await startStopLoss(
+    t,
     zoe,
     issuerKeywordRecord,
     terms,
@@ -1180,6 +1188,7 @@ test('update-boundaries-price-moves-above-old-upper-then-new-upper', async (t) =
   });
 
   const { creatorFacet, publicFacet } = await startStopLoss(
+    t,
     zoe,
     issuerKeywordRecord,
     terms,
@@ -1368,6 +1377,7 @@ test('update-boundaries-price-moves-below-old-lower-then-new-lower', async (t) =
   });
 
   const { creatorFacet, publicFacet } = await startStopLoss(
+    t,
     zoe,
     issuerKeywordRecord,
     terms,
@@ -1556,6 +1566,7 @@ test('update-boundaries-price-moves-below-old-lower-then-new-upper', async (t) =
   });
 
   const { creatorFacet, publicFacet } = await startStopLoss(
+    t,
     zoe,
     issuerKeywordRecord,
     terms,
@@ -1748,6 +1759,7 @@ test('boundaryWatcher-failed-no-tokens-locked', async (t) => {
   });
 
   const { creatorFacet, publicFacet } = await startStopLoss(
+    t,
     zoe,
     issuerKeywordRecord,
     terms,
@@ -1860,6 +1872,7 @@ test('boundaryWatcher-failed-then-remove-tokens-locked', async (t) => {
   });
 
   const { creatorFacet, publicFacet } = await startStopLoss(
+    t,
     zoe,
     issuerKeywordRecord,
     terms,
@@ -2016,6 +2029,7 @@ test('update-boundaries-outside-of-price-ratio', async (t) => {
   });
 
   const { creatorFacet, publicFacet } = await startStopLoss(
+    t,
     zoe,
     issuerKeywordRecord,
     terms,
@@ -2184,6 +2198,7 @@ test('initiate-stoploss-with-boundaries-outside-of-price-ratio', async (t) => {
   });
 
   const testingPromise = startStopLoss(
+    t,
     zoe,
     issuerKeywordRecord,
     terms,
@@ -2265,6 +2280,7 @@ test('remove-liquidity-failed-keep-tokens-locked', async (t) => {
   });
 
   const { creatorFacet, publicFacet } = await startStopLoss(
+    t,
     zoe,
     issuerKeywordRecord,
     terms,

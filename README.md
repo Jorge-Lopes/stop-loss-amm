@@ -34,7 +34,7 @@ Please make sure you install the agoric-sdk first.
    > Due to some problem related to ava setup we can only run test when we're in the contract/ directory.
    > So you should cd to contract/ directory until this issue is resolved.
    1. `cd contract`
-   2. Run `npx ava --verbose test/lendingPool/test-stopLoss.js`.
+   2. Run `npx ava -s -v test/test-stopLoss.js`.
 
 
 # Demonstration scenarios

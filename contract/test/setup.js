@@ -121,15 +121,15 @@ harden(setupAmmServices);
 
 
 export const setupStopLoss = async (
+  t,
   zoe,
   issuerKeywordRecord,
   terms,
-
 ) => {
 
-  const contractPath = new URL(contractRoots.stopLossRoot, import.meta.url).pathname;
-  const bundle = await bundleSource(contractPath);
-  const installation = await E(zoe).install(bundle);
+  const stopLossUrl = await importMetaResolve(contractRoots.stopLossRoot, import.meta.url);
+  const stopLossBundle = await provideBundle(t, new URL(stopLossUrl).pathname, 'stopLoss');
+  const installation = await E(zoe).install(stopLossBundle);
 
   const { publicFacet, creatorFacet  } = await E(zoe).startInstance(
     installation,
