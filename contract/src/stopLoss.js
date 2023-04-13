@@ -4,10 +4,10 @@ import {
   assertIssuerKeywords,
   assertProposalShape,
   getAmountOut,
-} from '@agoric/zoe/src/contractSupport';
+  offerTo,
+} from '@agoric/zoe/src/contractSupport/index.js';
 import { Far, E } from '@endo/far';
 import { AmountMath } from '@agoric/ertp';
-import { offerTo } from '@agoric/zoe/src/contractSupport/index.js';
 import {
   assertBoundaryShape,
   assertExecutionMode,

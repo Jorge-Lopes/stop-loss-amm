@@ -232,8 +232,9 @@ export const makeAssertPayouts = (
   };
 };
 
-export async function startStopLoss(zoe, issuerKeywordRecord, terms) {
+export async function startStopLoss(t, zoe, issuerKeywordRecord, terms) {
   const { publicFacet, creatorFacet } = await setupStopLoss(
+    t,
     zoe,
     issuerKeywordRecord,
     terms,

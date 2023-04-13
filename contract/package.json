@@ -23,7 +23,7 @@
     "@endo/far": "^0.2.9",
     "@endo/nat": "^4.1.18",
     "@endo/promise-kit": "^0.2.47",
-    "@agoric/inter-protocol": "0.11.0"
+    "@agoric/inter-protocol": "0.13.3"
   },
   "devDependencies": {
     "@agoric/deploy-script-support": "^0.9.0",
